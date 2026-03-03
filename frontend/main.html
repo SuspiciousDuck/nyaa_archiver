@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>Browse :: Nyaa</title>
+
+    <meta name="viewport" content="width=480px">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="shortcut icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="mask-icon" href="pinned-tab.svg" color="#3582F7">
+    <link rel="alternate" type="application/rss+xml" href="https://nyaa.si/?page=rss">
+
+    <meta property="og:site_name" content="Nyaa">
+    <meta property="og:title" content="Browse :: Nyaa">
+    <meta property="og:image" content="default.png">
+    <meta name="description"
+        content="A BitTorrent community focused on Eastern Asian media including anime, manga, music, and more">
+    <meta name="keywords"
+        content="torrents, bittorrent, torrent, anime, manga, sukebei, download, nyaa, magnet, magnets">
+    <meta property="og:description" content="Nyaa homepage">
+    <link id="bsThemeLink" rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="bootstrap-xl-mod.css">
+    <script>
+        function toggleDarkMode() {
+            "dark" === localStorage.getItem("theme") ? setThemeLight() : setThemeDark()
+        }
+        function setThemeDark() {
+            bsThemeLink.href = "bootstrap-dark.min.css",
+                localStorage.setItem("theme", "dark"),
+                document.body !== null && document.body.classList.add('dark')
+        }
+        function setThemeLight() {
+            bsThemeLink.href = "bootstrap.min.css",
+                localStorage.setItem("theme", "light"),
+                document.body !== null && document.body.classList.remove('dark')
+        }
+        if ("undefined" != typeof Storage) {
+            var bsThemeLink = document.getElementById("bsThemeLink");
+            "dark" === localStorage.getItem("theme") && setThemeDark()
+        }
+    </script>
+    <script>window.markdown_proxy_images = true;</script>
+    <link href="bootstrap-select.min.css" rel="stylesheet">
+    <link href="font-awesome.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="main.css" rel="stylesheet">
+
+    <!-- Core JavaScript -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"
+        integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"
+        integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/8.3.1/markdown-it.min.js"
+        integrity="sha256-3WZyZQOe+ql3pLo90lrkRtALrlniGdnf//gRpW0UQks=" crossorigin="anonymous"></script> -->
+    <!-- Modified to not apply border-radius to selectpickers and stuff so our navbar looks cool -->
+    <!-- <script src="bootstrap-select.min.js"></script>
+    <script src="main.min.js"></script> -->
+    <script src="fetch_patch.js"></script>
+
+    <link rel="search" type="application/opensearchdescription+xml" title="Nyaa.si"
+        href="https://nyaa.si/static/search.xml">
+</head>
+
+<body>
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-default navbar-static-top navbar-inverse">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="https://nyaa.si/">Nyaa</a>
+            </div><!--/.navbar-header -->
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <li><a href="https://nyaa.si/upload">Upload</a></li>
+                    <li class="dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                            aria-expanded="false">
+                            Info
+                            <span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a href="https://nyaa.si/rules">Rules</a></li>
+                            <li><a href="https://nyaa.si/help">Help</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="https://nyaa.si/?page=rss">RSS</a></li>
+                    <li><a href="https://twitter.com/NyaaV2">Twitter</a></li>
+                </ul>
+
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <a class="dropdown-toggle visible-lg visible-sm visible-xs" data-toggle="dropdown"
+                            role="button" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa fa-user fa-fw"></i>
+                            Guest
+                            <span class="caret"></span>
+                        </a>
+                        <a class="dropdown-toggle hidden-lg hidden-sm hidden-xs" data-toggle="dropdown"
+                            role="button" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa fa-user fa-fw"></i>
+                            <span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="https://nyaa.si/login">
+                                    <i class="fa fa-sign-in fa-fw"></i>
+                                    Login
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://nyaa.si/register">
+                                    <i class="fa fa-pencil fa-fw"></i>
+                                    Register
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <div class="search-container visible-xs visible-sm">
+                    <form class="navbar-form navbar-right form" action="/" method="get">
+
+                        <input type="text" class="form-control" name="q" placeholder="Search...">
+                        <br>
+
+                        <select class="form-control" title="Filter" data-width="120px" name="f">
+                            <option value="0" title="No filter" selected="selected">No filter</option>
+                            <option value="1" title="No remakes">No remakes</option>
+                            <option value="2" title="Trusted only">Trusted only</option>
+                        </select>
+
+                        <br>
+
+                        <select class="form-control" title="Category" data-width="200px" name="c">
+                            <option value="0_0" title="All categories" selected="selected">All categories</option>
+                            <option value="1_0" title="Anime">Anime</option>
+                            <option value="1_1" title="Anime - AMV">- Anime Music Video</option>
+                            <option value="1_2" title="Anime - English">- English-translated</option>
+                            <option value="1_3" title="Anime - Non-English">- Non-English-translated</option>
+                            <option value="1_4" title="Anime - Raw">- Raw</option>
+                            <option value="2_0" title="Audio">Audio</option>
+                            <option value="2_1" title="Audio - Lossless">- Lossless</option>
+                            <option value="2_2" title="Audio - Lossy">- Lossy</option>
+                            <option value="3_0" title="Literature">Literature</option>
+                            <option value="3_1" title="Literature - English">- English-translated</option>
+                            <option value="3_2" title="Literature - Non-English">- Non-English-translated</option>
+                            <option value="3_3" title="Literature - Raw">- Raw</option>
+                            <option value="4_0" title="Live Action">Live Action</option>
+                            <option value="4_1" title="Live Action - English">- English-translated</option>
+                            <option value="4_2" title="Live Action - Idol/PV">- Idol/Promotional Video</option>
+                            <option value="4_3" title="Live Action - Non-English">- Non-English-translated</option>
+                            <option value="4_4" title="Live Action - Raw">- Raw</option>
+                            <option value="5_0" title="Pictures">Pictures</option>
+                            <option value="5_1" title="Pictures - Graphics">- Graphics</option>
+                            <option value="5_2" title="Pictures - Photos">- Photos</option>
+                            <option value="6_0" title="Software">Software</option>
+                            <option value="6_1" title="Software - Apps">- Applications</option>
+                            <option value="6_2" title="Software - Games">- Games</option>
+                        </select>
+
+                        <br>
+
+                        <button class="btn btn-primary form-control" type="submit">
+                            <i class="fa fa-search fa-fw"></i> Search
+                        </button>
+                    </form>
+                </div><!--/.search-container -->
+
+                <form class="navbar-form navbar-right form" action="/" method="get">
+                    <div class="input-group search-container hidden-xs hidden-sm">
+                        <div class="input-group-btn nav-filter" id="navFilter-criteria">
+                            <div id="filter" class="btn-group bootstrap-select show-tick" style="width: 120px;">
+                                <button type="button" style="border-radius:0;border-left:0;"
+                                    class="btn dropdown-toggle btn-default" data-toggle="dropdown" role="button"
+                                    title="No filter">
+                                    <span class="filter-option pull-left">No filter</span>
+                                    &nbsp;
+                                    <span class="bs-caret">
+                                        <span class="caret"></span>
+                                    </span>
+                                </button>
+                                <div class="dropdown-menu open" role="combobox">
+                                    <ul class="dropdown-menu inner" role="listbox" aria-expanded="false">
+                                        <li data-original-index="1" class="selected">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="true">
+                                                <span class="text">No filter</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="2">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">No remakes</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="3">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">Trusted only</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <select class="selectpicker show-tick" title="Filter" data-width="120px" name="f"
+                                    tabindex="-98">
+                                    <option class="bs-title-option" value="">Filter</option>
+                                    <option value="0" title="No filter" selected="selected">No filter</option>
+                                    <option value="1" title="No remakes">No remakes</option>
+                                    <option value="2" title="Trusted only">Trusted only</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="input-group-btn nav-filter" id="navFilter-category">
+                            <div class="btn-group bootstrap-select show-tick" style="width: 130px;">
+                                <button type="button" style="border-radius:0;border-left:0;"
+                                    class="btn dropdown-toggle btn-default" data-toggle="dropdown" role="button"
+                                    title="All categories">
+                                    <span class="filter-option pull-left">All categories</span>
+                                    &nbsp;
+                                    <span class="bs-caret">
+                                        <span class="caret"></span>
+                                    </span>
+                                </button>
+                                <div class="dropdown-menu open" role="combobox">
+                                    <ul class="dropdown-menu inner" role="listbox" aria-expanded="false">
+                                        <li data-original-index="1" class="selected">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="true">
+                                                <span class="text">All categories</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="2">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">Anime</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="3">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Anime Music Video</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="4">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- English-translated</span>
+
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="5">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Non-English-translated</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="6">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Raw</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="7">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">Audio</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="8">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Lossless</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="9">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Lossy</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="10">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">Literature</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="11">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- English-translated</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="12">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Non-English-translated</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="13">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Raw</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="14">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">Live Action</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="15">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- English-translated</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="16">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Idol/Promotional Video</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="17">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Non-English-translated</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="18">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Raw</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="19">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">Pictures</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="20">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Graphics</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="21">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Photos</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="22">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">Software</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="23">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Applications</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                        <li data-original-index="24">
+                                            <a tabindex="0" class="" data-tokens="null" role="option"
+                                                aria-disabled="false" aria-selected="false">
+                                                <span class="text">- Games</span>
+                                                <span class="glyphicon glyphicon-ok check-mark"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <select class="selectpicker show-tick" title="Category" data-width="130px" name="c"
+                                    tabindex="-98">
+                                    <option class="bs-title-option" value="">Category</option>
+                                    <option value="0_0" title="All categories" selected="selected">All categories
+                                    </option>
+                                    <option value="1_0" title="Anime">Anime</option>
+                                    <option value="1_1" title="Anime - AMV">- Anime Music Video</option>
+                                    <option value="1_2" title="Anime - English">- English-translated</option>
+                                    <option value="1_3" title="Anime - Non-English">- Non-English-translated</option>
+                                    <option value="1_4" title="Anime - Raw">- Raw</option>
+                                    <option value="2_0" title="Audio">Audio</option>
+                                    <option value="2_1" title="Audio - Lossless">- Lossless</option>
+                                    <option value="2_2" title="Audio - Lossy">- Lossy</option>
+                                    <option value="3_0" title="Literature">Literature</option>
+                                    <option value="3_1" title="Literature - English">- English-translated</option>
+                                    <option value="3_2" title="Literature - Non-English">- Non-English-translated
+                                    </option>
+                                    <option value="3_3" title="Literature - Raw">- Raw</option>
+                                    <option value="4_0" title="Live Action">Live Action</option>
+                                    <option value="4_1" title="Live Action - English">- English-translated</option>
+                                    <option value="4_2" title="Live Action - Idol/PV">- Idol/Promotional Video</option>
+                                    <option value="4_3" title="Live Action - Non-English">- Non-English-translated
+                                    </option>
+                                    <option value="4_4" title="Live Action - Raw">- Raw</option>
+                                    <option value="5_0" title="Pictures">Pictures</option>
+                                    <option value="5_1" title="Pictures - Graphics">- Graphics</option>
+                                    <option value="5_2" title="Pictures - Photos">- Photos</option>
+                                    <option value="6_0" title="Software">Software</option>
+                                    <option value="6_1" title="Software - Apps">- Applications</option>
+                                    <option value="6_2" title="Software - Games">- Games</option>
+                                </select>
+                            </div>
+                        </div>
+                        <input type="text" class="form-control search-bar" name="q" placeholder="Search...">
+                        <div class="input-group-btn search-btn">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fa fa-search fa-fw"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div><!--/.nav-collapse -->
+        </div><!--/.container -->
+    </nav>
+
+    <div class="container">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-striped torrent-list">
+                <thead>
+                    <tr>
+                        <th class="hdr-category text-center" style="width:80px;">Category</th>
+                        <th class="hdr-name" style="width:auto;">Name</th>
+                        <th class="hdr-comments sorting text-center" title="Comments" style="width:50px;">
+                            <a href="https://nyaa.si/?s=comments&amp;o=desc"></a>
+                            <i class="fa fa-comments-o"></i>
+                        </th>
+                        <th class="hdr-link text-center" style="width:70px;">Link</th>
+                        <th class="hdr-size sorting text-center" style="width:100px;">
+                            <a href="https://nyaa.si/?s=size&amp;o=desc"></a>
+                            Size
+                        </th>
+                        <th class="hdr-date sorting_desc text-center" title="In local time" style="width:140px;">
+                            <a href="https://nyaa.si/?s=id&amp;o=asc"></a>
+                            Date
+                        </th>
+                        <th class="hdr-seeders sorting text-center" title="Seeders" style="width:50px;">
+                            <a href="https://nyaa.si/?s=seeders&amp;o=desc"></a>
+                            <i class="fa fa-arrow-up" aria-hidden="true"></i>
+                        </th>
+                        <th class="hdr-leechers sorting text-center" title="Leechers" style="width:50px;">
+                            <a href="https://nyaa.si/?s=leechers&amp;o=desc"></a>
+                            <i class="fa fa-arrow-down" aria-hidden="true"></i>
+                        </th>
+                        <th class="hdr-downloads sorting text-center" title="Completed downloads" style="width:50px;">
+                            <a href="https://nyaa.si/?s=downloads&amp;o=desc"></a>
+                            <i class="fa fa-check" aria-hidden="true"></i>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- <tr class="default">
+                        <td>
+                            <a href="https://nyaa.si/?c=1_3" title="Anime - Non-English-translated">
+                                <img src="1_3.png" alt="Anime - Non-English-translated" class="category-icon">
+                            </a>
+                        </td>
+                        <td colspan="2">
+                            <a href="https://nyaa.si/view/1971853"
+                                title="Wind.Breaker.S02E04.MULTi.1080p.WEB-DL.x264-T3KASHi">Wind.Breaker.S02E04.MULTi.1080p.WEB-DL.x264-T3KASHi
+                            </a>
+                        </td>
+                        <td class="text-center">
+                            <a href="https://nyaa.si/download/1971853.torrent">
+                                <i class="fa fa-fw fa-download"></i>
+                            </a>
+                            <a
+                                href="magnet:?xt=urn:btih:9a7f0eb58cd85d38cc0a060f02403f39bf3595b1&amp;dn=Wind.Breaker.S02E04.MULTi.1080p.WEB-DL.x264-T3KASHi&amp;tr=http%3A%2F%2Fnyaa.tracker.wf%3A7777%2Fannounce&amp;tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&amp;tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&amp;tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&amp;tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce">
+                                <i class="fa fa-fw fa-magnet"></i>
+                            </a>
+                        </td>
+                        <td class="text-center">1.4 GiB</td>
+                        <td class="text-center" data-timestamp="1747365089" title="8 minutes 4 seconds ago">2025-05-16
+                            03:11</td>
+                        <td class="text-center">0</td>
+                        <td class="text-center">2</td>
+                        <td class="text-center">0</td>
+                    </tr> -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="center">
+            <nav>
+                <ul class="pagination">
+                    <li class="disabled"><a href="#">«</a></li>
+                    <li class="active"><a href="#">1 <span class="sr-only">(current)</span></a></li>
+                    <li><a href="https://nyaa.si/?p=2">2</a></li>
+                    <li><a href="https://nyaa.si/?p=3">3</a></li>
+                    <li><a href="https://nyaa.si/?p=4">4</a></li>
+                    <li><a href="https://nyaa.si/?p=5">5</a></li>
+                    <li><a href="https://nyaa.si/?p=6">6</a></li>
+
+                    <li><a rel="next" href="https://nyaa.si/?p=2">»</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div> <!-- /container -->
+
+    <footer style="text-align: center;">
+        <p>Dark Mode: <a href="#" id="themeToggle">Toggle</a></p>
+    </footer>
+
+</body>
+
+</html>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta charset="utf-8">
+		<title>Rules :: Nyaa</title>
+
+		<meta name="viewport" content="width=480px">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<link rel="shortcut icon" type="image/png" href="/favicon.png">
+		<link rel="icon" type="image/png" href="/favicon.png">
+		<link rel="mask-icon" href="/pinned-tab.svg" color="#3582F7">
+		<link rel="alternate" type="application/rss+xml" href="/?page=rss">
+
+		<meta property="og:site_name" content="Nyaa">
+		<meta property="og:title" content="Rules :: Nyaa">
+		<meta property="og:image" content="/default.png">
+
+		<link href="/bootstrap.min.css" rel="stylesheet" id="bsThemeLink">
+		<link href="/bootstrap-xl-mod.css" rel="stylesheet">
+
+    <script>
+        function toggleDarkMode() {
+            "dark" === localStorage.getItem("theme") ? setThemeLight() : setThemeDark()
+        }
+        function setThemeDark() {
+            bsThemeLink.href = "/bootstrap-dark.min.css",
+                localStorage.setItem("theme", "dark"),
+                document.body !== null && document.body.classList.add('dark')
+        }
+        function setThemeLight() {
+            bsThemeLink.href = "/bootstrap.min.css",
+                localStorage.setItem("theme", "light"),
+                document.body !== null && document.body.classList.remove('dark')
+        }
+        if ("undefined" != typeof Storage) {
+            var bsThemeLink = document.getElementById("bsThemeLink");
+            "dark" === localStorage.getItem("theme") && setThemeDark()
+        }
+    </script>
+		<script>window.markdown_proxy_images=true;</script>
+
+		<link rel="stylesheet" href="/bootstrap-select.min.css">
+		<link rel="stylesheet" href="/font-awesome.min.css">
+		<link href="/index.css" rel="stylesheet">
+
+		<script src="/common.js"></script>
+
+    <link rel="search" type="application/opensearchdescription+xml" title="Nyaa.si" href="/search.xml">
+	</head>
+	<body>
+		<!-- Fixed navbar -->
+		<nav class="navbar navbar-default navbar-static-top navbar-inverse">
+			<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+					<span class="sr-only">Toggle navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="/">Nyaa</a>
+				</div><!--/.navbar-header -->
+				<div id="navbar" class="navbar-collapse collapse">
+					<ul class="nav navbar-nav">
+						<li><a href="/upload">Upload</a></li>
+						<li class="dropdown">
+							<a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+								Info
+								<span class="caret"></span>
+							</a>
+							<ul class="dropdown-menu">
+								<li class="active"><a href="/rules">Rules</a></li>
+								<li><a href="/help">Help</a></li>
+							</ul>
+						</li>
+						<li><a href="/?page=rss">RSS</a></li>
+					</ul>
+
+					<ul class="nav navbar-nav navbar-right">
+						<li class="dropdown">
+							<a class="dropdown-toggle visible-lg visible-sm visible-xs" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+								<i class="fa fa-user fa-fw"></i>
+								Guest
+								<span class="caret"></span>
+							</a>
+							<a class="dropdown-toggle hidden-lg hidden-sm hidden-xs" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+								<i class="fa fa-user fa-fw"></i>
+								<span class="caret"></span>
+							</a>
+							<ul class="dropdown-menu">
+								<li>
+									<a href="/login">
+										<i class="fa fa-sign-in fa-fw"></i>
+										Login
+									</a>
+								</li>
+								<li>
+									<a href="/register">
+										<i class="fa fa-pencil fa-fw"></i>
+										Register
+									</a>
+								</li>
+							</ul>
+						</li>
+					</ul>
+
+
+
+					<div class="search-container visible-xs visible-sm">
+						<form class="navbar-form navbar-right form" action="/" method="get">
+
+							<input type="text" class="form-control" name="q" placeholder="Search...">
+							<br>
+
+							<select class="form-control" title="Filter" data-width="120px" name="f">
+								<option value="0" title="No filter" selected="selected">No filter</option>
+								<option value="1" title="No remakes">No remakes</option>
+								<option value="2" title="Trusted only">Trusted only</option>
+							</select>
+
+							<br>
+
+							<select class="form-control" title="Category" data-width="200px" name="c">
+								<option value="0_0" title="All categories" selected="selected">
+									All categories
+								</option>
+								<option value="1_0" title="Anime">
+									Anime
+								</option>
+								<option value="1_1" title="Anime - AMV">
+									- Anime Music Video
+								</option>
+								<option value="1_2" title="Anime - English">
+									- English-translated
+								</option>
+								<option value="1_3" title="Anime - Non-English">
+									- Non-English-translated
+								</option>
+								<option value="1_4" title="Anime - Raw">
+									- Raw
+								</option>
+								<option value="2_0" title="Audio">
+									Audio
+								</option>
+								<option value="2_1" title="Audio - Lossless">
+									- Lossless
+								</option>
+								<option value="2_2" title="Audio - Lossy">
+									- Lossy
+								</option>
+								<option value="3_0" title="Literature">
+									Literature
+								</option>
+								<option value="3_1" title="Literature - English">
+									- English-translated
+								</option>
+								<option value="3_2" title="Literature - Non-English">
+									- Non-English-translated
+								</option>
+								<option value="3_3" title="Literature - Raw">
+									- Raw
+								</option>
+								<option value="4_0" title="Live Action">
+									Live Action
+								</option>
+								<option value="4_1" title="Live Action - English">
+									- English-translated
+								</option>
+								<option value="4_2" title="Live Action - Idol/PV">
+									- Idol/Promotional Video
+								</option>
+								<option value="4_3" title="Live Action - Non-English">
+									- Non-English-translated
+								</option>
+								<option value="4_4" title="Live Action - Raw">
+									- Raw
+								</option>
+								<option value="5_0" title="Pictures">
+									Pictures
+								</option>
+								<option value="5_1" title="Pictures - Graphics">
+									- Graphics
+								</option>
+								<option value="5_2" title="Pictures - Photos">
+									- Photos
+								</option>
+								<option value="6_0" title="Software">
+									Software
+								</option>
+								<option value="6_1" title="Software - Apps">
+									- Applications
+								</option>
+								<option value="6_2" title="Software - Games">
+									- Games
+								</option>
+							</select>
+
+							<br>
+
+							<button class="btn btn-primary form-control" type="submit">
+								<i class="fa fa-search fa-fw"></i> Search
+							</button>
+						</form>
+					</div><!--/.search-container -->
+
+					<form class="navbar-form navbar-right form" action="/" method="get">
+						<div class="input-group search-container hidden-xs hidden-sm">
+							<div class="input-group-btn nav-filter" id="navFilter-criteria">
+								<div class="btn-group bootstrap-select show-tick" style="width: 120px;"><button type="button" style="border-radius:0;border-left:0;" class="btn dropdown-toggle btn-default" data-toggle="dropdown" role="button" title="No filter"><span class="filter-option pull-left">No filter</span>&nbsp;<span class="bs-caret"><span class="caret"></span></span></button><div class="dropdown-menu open" role="combobox"><ul class="dropdown-menu inner" role="listbox" aria-expanded="false"><li data-original-index="1" class="selected"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="true"><span class="text">No filter</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="2"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">No remakes</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="3"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">Trusted only</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li></ul></div><select class="selectpicker show-tick" title="Filter" data-width="120px" name="f" tabindex="-98"><option class="bs-title-option" value="">Filter</option>
+									<option value="0" title="No filter" selected="selected">No filter</option>
+									<option value="1" title="No remakes">No remakes</option>
+									<option value="2" title="Trusted only">Trusted only</option>
+								</select></div>
+							</div>
+
+							<div class="input-group-btn nav-filter" id="navFilter-category">
+								<!--
+									On narrow viewports, there isn't enough room to fit the full stuff in the selectpicker, so we show a full-width one on wide viewports, but squish it on narrow ones.
+								-->
+								<div class="btn-group bootstrap-select show-tick" style="width: 130px;"><button type="button" style="border-radius:0;border-left:0;" class="btn dropdown-toggle btn-default" data-toggle="dropdown" role="button" title="All categories"><span class="filter-option pull-left">All categories</span>&nbsp;<span class="bs-caret"><span class="caret"></span></span></button><div class="dropdown-menu open" role="combobox"><ul class="dropdown-menu inner" role="listbox" aria-expanded="false"><li data-original-index="1" class="selected"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="true"><span class="text">
+										All categories
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="2"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										Anime
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="3"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Anime Music Video
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="4"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- English-translated
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="5"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Non-English-translated
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="6"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Raw
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="7"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										Audio
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="8"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Lossless
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="9"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Lossy
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="10"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										Literature
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="11"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- English-translated
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="12"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Non-English-translated
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="13"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Raw
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="14"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										Live Action
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="15"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- English-translated
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="16"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Idol/Promotional Video
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="17"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Non-English-translated
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="18"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Raw
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="19"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										Pictures
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="20"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Graphics
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="21"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Photos
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="22"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										Software
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="23"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Applications
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li><li data-original-index="24"><a tabindex="0" class="" data-tokens="null" role="option" aria-disabled="false" aria-selected="false"><span class="text">
+										- Games
+									</span><span class="glyphicon glyphicon-ok check-mark"></span></a></li></ul></div><select class="selectpicker show-tick" title="Category" data-width="130px" name="c" tabindex="-98"><option class="bs-title-option" value="">Category</option>
+									<option value="0_0" title="All categories" selected="selected">
+										All categories
+									</option>
+									<option value="1_0" title="Anime">
+										Anime
+									</option>
+									<option value="1_1" title="Anime - AMV">
+										- Anime Music Video
+									</option>
+									<option value="1_2" title="Anime - English">
+										- English-translated
+									</option>
+									<option value="1_3" title="Anime - Non-English">
+										- Non-English-translated
+									</option>
+									<option value="1_4" title="Anime - Raw">
+										- Raw
+									</option>
+									<option value="2_0" title="Audio">
+										Audio
+									</option>
+									<option value="2_1" title="Audio - Lossless">
+										- Lossless
+									</option>
+									<option value="2_2" title="Audio - Lossy">
+										- Lossy
+									</option>
+									<option value="3_0" title="Literature">
+										Literature
+									</option>
+									<option value="3_1" title="Literature - English">
+										- English-translated
+									</option>
+									<option value="3_2" title="Literature - Non-English">
+										- Non-English-translated
+									</option>
+									<option value="3_3" title="Literature - Raw">
+										- Raw
+									</option>
+									<option value="4_0" title="Live Action">
+										Live Action
+									</option>
+									<option value="4_1" title="Live Action - English">
+										- English-translated
+									</option>
+									<option value="4_2" title="Live Action - Idol/PV">
+										- Idol/Promotional Video
+									</option>
+									<option value="4_3" title="Live Action - Non-English">
+										- Non-English-translated
+									</option>
+									<option value="4_4" title="Live Action - Raw">
+										- Raw
+									</option>
+									<option value="5_0" title="Pictures">
+										Pictures
+									</option>
+									<option value="5_1" title="Pictures - Graphics">
+										- Graphics
+									</option>
+									<option value="5_2" title="Pictures - Photos">
+										- Photos
+									</option>
+									<option value="6_0" title="Software">
+										Software
+									</option>
+									<option value="6_1" title="Software - Apps">
+										- Applications
+									</option>
+									<option value="6_2" title="Software - Games">
+										- Games
+									</option>
+								</select></div>
+							</div>
+							<input type="text" class="form-control search-bar" name="q" placeholder="Search...">
+							<div class="input-group-btn search-btn">
+								<button class="btn btn-primary" type="submit">
+									<i class="fa fa-search fa-fw"></i>
+								</button>
+							</div>
+						</div>
+					</form>
+				</div><!--/.nav-collapse -->
+			</div><!--/.container -->
+		</nav>
+
+		<div class="container">
+
+
+<div class="content">
+	<h1>Site Rules</h1><!-- <br> -->
+	<h1>Breaking any of the rules on this page may result in being banned</h1>
+	<p><b>Shitposting and Trolling:</b> Your account will be banned if you 
+keep this up. This includes, but is not limited to, racial, religious, 
+political topics. Just be nice.</p>
+	<p><b>Making inaccurate/false reports:</b> Your account will be banned if you keep this up.</p>
+	<p><b>Bumping:</b> Your account will be banned if you keep deleting and reposting your torrents.</p>
+	<p><b>Flooding:</b> If you have five or more releases of the same type to release in one go, make a batch torrent containing all of them.</p>
+	<p><b>URL redirection services:</b> These are removed on sight along with their torrents.</p>
+	<p><b>Advertising:</b> No.</p>
+	<p><b>Content restrictions:</b> This site is for content that originates from and/or is specific to China, Japan, and/or Korea.</p>
+	<p>Other content is not allowed without exceptions and will be removed.</p>
+	<p>The above content restrictions for anime are defined by the content having an <a href="https://anidb.net/" referrerpolicy="no-referrer" rel="noopener nofollow">AniDB</a> listing.</p><br>
+	<p><a href="https://nyaa.si/"><b>nyaa.si</b></a> is for <b>work-safe</b> content only. The following rules apply:</p>
+	<ul>
+		<li>
+			<p>No pornography of any kind.</p>
+		</li>
+		<li>
+			<p>No extreme visual content. This means no scat, gore, or any other of such things.</p>
+		</li>
+		<li>
+			<p>Troll torrents are not allowed. These will be removed on sight.</p>
+		</li>
+	</ul><br>
+	<p><a href="https://sukebei.nyaa.si/"><b>sukebei.nyaa.si</b></a> is the place for <b>non-work-safe</b> content only. Still, the following rules apply:</p>
+	<ul>
+		<li>
+			<p>No extreme real life visual content. This means no scat, gore, bestiality, or any other of such things.</p>
+		</li>
+		<li>
+			<p>Absolutely no real life child pornography of any kind.</p>
+		</li>
+		<li>
+			<p>Troll torrents are not allowed. These will be removed on sight.</p>
+		</li>
+	</ul><br>
+	<p><b>Torrent information:</b> Text files (.txt) or info files (.nfo) for torrent or release group information are preferred.</p>
+	<p>Torrents containing (.chm) or (.url) files may be removed.</p><br>
+	<p><b>Upper limits on video resolution based on source:</b></p>
+	<ul>
+		<li>
+			<p>DVD source video is limited to 1024x576p.</p>
+		</li>
+		<li>
+			<p>Web source video is limited to 1920x1080p or source resolution, whichever is lower.</p>
+		</li>
+		<li>
+			<p>TV source video is by default limited to 1920x1080p.<!-- The BS11, BS-NTV, NHK-BS Premium, and WOWOW channels are limited to 1920x1080p.--> SD channels, however, are limited to 480p.</p>
+		</li>
+		<li>
+			<p>Blu-ray source video is limited to 1920x1080p.</p>
+		</li>
+		<li>
+			<p>UHD source video is limited to 3840x2160p.</p>
+		</li>
+	</ul><br>
+	<p>Naturally, untouched sources are not bound by these limits. Leaks are also not subject to any resolution limits.</p><br>
+	<p><b>Finally, a few notes concerning tagging and using other people's work:</b></p>
+	<ul>
+		<li>
+			<p>Do not add your own tag(s) when reuploading an original release.</p>
+		</li>
+		<li>
+			<p>Unless you are reuploading an original release, you should either 
+avoid using tags that are not your own or make it extremely clear to 
+everyone that you are the one responsible for the upload.</p>
+		</li>
+		<li>
+			<p>If these policies are not obeyed, then those torrents will be 
+removed if reported by a group or person commonly seen as the owner of 
+the tag(s). This especially applies to remake torrents.</p>
+		</li>
+		<li>
+			<p>Although only hinted at above, we may remove troll torrents tagged with A-sucks, B-is-slow, or such if reported by A or B.</p>
+		</li>
+		<li>
+			<p>Remakes which are utterly bit rate-starved are not allowed.</p>
+		</li>
+		<li>
+			<p>Remakes which add watermarks or such are not allowed.</p>
+		</li>
+		<li>
+			<p>Remakes which reencode video to XviD or worse are not allowed.</p>
+		</li>
+		<li>
+			<p>Remakes of JPG/PNG-based releases are not allowed without exceptions since there is most often no point in making such.</p>
+		</li>
+	</ul>
+</div>
+		</div> <!-- /container -->
+
+		<footer style="text-align: center;">
+			<p>
+        Dark Mode: 
+        <a role="button" onclick="toggleDarkMode()">Toggle</a>
+      </p>
+		</footer>
+	
+</body></html>

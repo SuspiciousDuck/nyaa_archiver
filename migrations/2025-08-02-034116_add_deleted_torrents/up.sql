@@ -1,0 +1,3 @@
+CREATE TABLE deleted_torrents (
+  id INTEGER NOT NULL PRIMARY KEY UNIQUE
+)

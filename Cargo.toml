@@ -1,0 +1,57 @@
+[package]
+name = "tracker_front"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "tracker_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "update_torrent"
+path = "src/update_torrent.rs"
+
+[[bin]]
+name = "api"
+path = "src/api.rs"
+
+[[bin]]
+name = "tasks"
+path = "src/tasks.rs"
+
+[[bin]]
+name = "scraper"
+path = "src/scraper.rs"
+
+[[bin]]
+name = "hamburger"
+path = "src/hamburger.rs"
+
+[dependencies]
+actix-files = "0.6.6"
+actix-web = { version = "4.11.0", features = ["compress-gzip", "compress-zstd", "compress-brotli"] }
+arti-ureq = { version = "0.39.0", default-features = false, features = ["rustls"] }
+byte-unit = "5.1.6"
+chrono = { version = "0.4.41", default-features = false, features = ["alloc", "std"] }
+cron = "0.15.0"
+data-encoding = "2.9.0"
+derive_more = "2.0.1"
+diesel = { git = "https://github.com/diesel-rs/diesel.git", version = "2.3.6", features = ["sqlite", "returning_clauses_for_sqlite_3_35", "i-implement-a-third-party-backend-and-opt-into-breaking-changes"] }
+dotenvy = "0.15.7"
+env_logger = "0.11.8"
+flate2 = "1.1.2"
+hex = "0.4.3"
+ipc-channel = "0.20.1"
+lava_torrent = "0.11.1"
+log = "0.4.27"
+magnet-url = "3.0.0"
+num-derive = "0.4.2"
+num-traits = "0.2.19"
+regex = "1.11.1"
+reqwest = { version = "0.13.2", features = ["blocking"] }
+ring = "0.17.14"
+scraper = "0.25.0"
+serde = { version = "1.0.219", features = ["derive"] }
+serde-xml-rs = "0.8.0"
+serde_json = "1.0.141"
+thiserror = "2.0.12"
