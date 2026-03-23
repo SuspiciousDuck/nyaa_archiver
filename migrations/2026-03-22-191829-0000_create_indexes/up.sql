@@ -1,0 +1,9 @@
+CREATE INDEX idx_torrents_date ON torrents(date);
+CREATE INDEX idx_torrents_seeders ON torrents(seeders);
+CREATE INDEX idx_torrents_leechers ON torrents(leechers);
+CREATE INDEX idx_torrents_completed ON torrents(completed);
+CREATE INDEX idx_torrents_size ON torrents(size);
+CREATE INDEX idx_torrents_title ON torrents(title);
+CREATE INDEX idx_torrents_comments ON torrents(comments);
+CREATE INDEX idx_torrents_remake ON torrents(remake);
+CREATE INDEX idx_torrents_trusted ON torrents(trusted);

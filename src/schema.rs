@@ -56,9 +56,4 @@ diesel::table! {
 
 diesel::joinable!(comments -> torrents (torrent_id));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    comments,
-    deleted_torrents,
-    torrents,
-    users,
-);
+diesel::allow_tables_to_appear_in_same_query!(comments, deleted_torrents, torrents, users,);

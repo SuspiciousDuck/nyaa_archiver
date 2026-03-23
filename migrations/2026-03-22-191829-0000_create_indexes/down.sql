@@ -1,0 +1,9 @@
+DROP INDEX idx_torrents_date;
+DROP INDEX idx_torrents_seeders;
+DROP INDEX idx_torrents_leechers;
+DROP INDEX idx_torrents_completed;
+DROP INDEX idx_torrents_size;
+DROP INDEX idx_torrents_title;
+DROP INDEX idx_torrents_comments;
+DROP INDEX idx_torrents_remake;
+DROP INDEX idx_torrents_trusted;
