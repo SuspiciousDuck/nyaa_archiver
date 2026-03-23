@@ -1,5 +1,5 @@
 [package]
-name = "tracker_front"
+name = "nyaa_archiver"
 version = "0.1.0"
 edition = "2024"
 license = "GPL-3"

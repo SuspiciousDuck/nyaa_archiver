@@ -1,8 +1,5 @@
 use chrono::TimeDelta;
-use std::{
-    io::{stdin, stdout, Read, Write},
-    sync::{Arc, Mutex},
-};
+use std::io::{stdin, stdout, Read, Write};
 use tracker_lib::{establish_connection, scrape::*};
 
 fn input(msg: &str, eof: bool) -> String {
