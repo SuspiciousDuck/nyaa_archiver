@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block title %}Server Error :: {{ crate::SITE_NAME }}{% endblock %}
+{% block metatags %}
+<meta property="og:description" content="An error occurred.">
+{% endblock %}
+{% block body %}
+<h1>Server error!</h1>
+<p>The server encountered an error while processing your request.</p>
+{% endblock %}

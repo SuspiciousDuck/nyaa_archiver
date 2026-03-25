@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{% block title %}{{ crate::SITE_NAME }}{% endblock %}</title>
+
+    <meta name="viewport" content="width=480px" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="shortcut icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="mask-icon" href="pinned-tab.svg" color="#3582F7" />
+    {# remember to add support for rss queries and whatnot #}
+    <link rel="alternate" type="application/rss+xml" href="/?page=rss" />
+
+    <meta property="og:site_name" content="{{ crate::SITE_NAME }}" />
+    <meta property="og:title" content="{{ as_title() }}" />
+    <meta
+      property="og:image"
+      content="{% block meta_image %}default.png{% endblock %}"
+    />
+
+    {% block metatags %} {% endblock %}
+
+    <link id="bsThemeLink" rel="stylesheet" href="/bootstrap.min.css" />
+    <link rel="stylesheet" href="/bootstrap-xl-mod.css" />
+
+    <script>
+      function toggleDarkMode() {
+        "dark" === localStorage.getItem("theme")
+          ? setThemeLight()
+          : setThemeDark();
+      }
+      function setThemeDark() {
+        ((bsThemeLink.href = "/bootstrap-dark.min.css"),
+          localStorage.setItem("theme", "dark"),
+          document.body !== null && document.body.classList.add("dark"));
+      }
+      function setThemeLight() {
+        ((bsThemeLink.href = "/bootstrap.min.css"),
+          localStorage.setItem("theme", "light"),
+          document.body !== null && document.body.classList.remove("dark"));
+      }
+      if ("undefined" != typeof Storage) {
+        var bsThemeLink = document.getElementById("bsThemeLink");
+        "dark" === localStorage.getItem("theme") && setThemeDark();
+      }
+    </script>
+
+    <link href="/bootstrap-select.min.css" rel="stylesheet" />
+    <link href="/font-awesome.min.css" rel="stylesheet" />
+    <link href="/index.css" rel="stylesheet" />
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"
+      integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"
+      integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8="
+      crossorigin="anonymous"
+    ></script>
+    <script src="/bootstrap-select.min.js"></script>
+
+    <!--
+	<script src="/common.js"></script>
+	<script src="/index.js"></script>
+	-->
+
+    <link
+      rel="search"
+      type="application/opensearchdescription+xml"
+      title="{{ crate::SITE_NAME }}"
+      href="/static/search.xml"
+    />
+  </head>
+
+  <body>
+    <nav class="navbar navbar-default navbar-static-top navbar-inverse">
+      <div class="container">
+        <div class="navbar-header">
+          <button
+            type="button"
+            class="navbar-toggle collapsed"
+            data-toggle="collapse"
+            data-target="#navbar"
+            aria-expanded="false"
+            aria-controls="navbar"
+          >
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/">{{ crate::SITE_NAME }}</a>
+        </div>
+        {# define var search_username to user.username if user_page defined #}
+        {# define var search_placeholder as "Search search_username torrents..." if user_page defined else "Search..." #}
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            {# if on torrent upload page then set class of li active #}
+            <li>
+              <a href="/upload">Upload</a>
+            </li>
+            <li class="dropdown">
+              <a
+                href="#"
+                class="dropdown-toggle"
+                data-toggle="dropdown"
+                role="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+              >
+                Info
+                <span class="caret"></span>
+              </a>
+              <ul class="dropdown-menu">
+                {# if on respective page then set class of li active #}
+                <li>
+                  <a href="/rules">Rules</a>
+                </li>
+                <li>
+                  <a href="/help">Help</a>
+                </li>
+                <li>
+                  <a href="/trusted">Trusted</a>
+                </li>
+              </ul>
+            </li>
+            {# remember to implement rss_filter kwargs #} {#
+            /?page=rss&rss_filter if rss_filter else /?page=rss #}
+            <li><a href="/?page=rss">RSS</a></li>
+            {# if user is moderator, add the following: #}
+            <!--
+            <li class="dropdown">
+				<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+					Admin
+					<span class="caret"></span>
+				</a>
+				<ul class="dropdown-menu">
+					{# if on respective page then set class of li active #}
+					<li>
+						<a href="/admin/reports">Reports</a>
+					</li>
+					<li>
+						<a href="/admin/log">Log</a>
+					</li>
+					<li>
+						<a href="/admin/bans">Bans</a>
+					</li>
+					<li>
+						<a href="/admin/trusted">Trusted</a>
+					</li>
+				</ul>
+            </li>
+            -->
+			</ul>
+
+			<ul class="nav navbar-nav navbar-right">
+            {# if signed in add the following: #}
+            <!--
+						<li class="dropdown">
+							<a href="#" class="dropdown-toggle visible-lg visible-sm visible-xs" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+								<i class="fa fa-user fa-fw"></i>
+                {# username here #}
+								<span class="caret"></span>
+							</a>
+							<a href="#" class="dropdown-toggle hidden-lg hidden-sm hidden-xs" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+								<i class="fa fa-user fa-fw"></i>
+								<span class="caret"></span>
+							</a>
+							<ul class="dropdown-menu">
+								<li class="hidden-lg hidden-sm hidden-xs">
+									<a><i class="fa fa-user fa-fw"></i>Logged in as {# username here #}</a>
+								</li>
+								<li class="hidden-lg hidden-sm hidden-xs divider" role="separator">
+
+								</li>
+								<li>
+                  <a href="/user/{# username here #}">
+										<i class="fa fa-user fa-fw"></i>
+										Torrents
+									</a>
+								</li>
+								<li>
+									<a href="{# view profile href #}">
+										<i class="fa fa-gear fa-fw"></i>
+										Profile
+									</a>
+								</li>
+								<li>
+									<a href="{# user logout href #}">
+										<i class="fa fa-times fa-fw"></i>
+										Logout
+									</a>
+								</li>
+							</ul>
+            </li>
+            -->
+            {# if not signed in add the following: #}
+            <li class="dropdown">
+              <a
+                href="#"
+                class="dropdown-toggle visible-lg visible-sm visible-xs"
+                data-toggle="dropdown"
+                role="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+              >
+                <i class="fa fa-user fa-fw"></i>
+                Guest
+                <span class="caret"></span>
+              </a>
+              <a
+                href="#"
+                class="dropdown-toggle hidden-lg hidden-sm hidden-xs"
+                data-toggle="dropdown"
+                role="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+              >
+                <i class="fa fa-user fa-fw"></i>
+                <span class="caret"></span>
+              </a>
+              <ul class="dropdown-menu">
+                <li>
+                  <a href="/login">
+                    <i class="fa fa-sign-in fa-fw"></i>
+                    Login
+                  </a>
+                </li>
+                <li>
+                  <a href="/register">
+                    <i class="fa fa-pencil fa-fw"></i>
+                    Register
+                  </a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+
+          {% let nyaa_cats = models::Category::all() %}
+
+          <div class="search-container visible-xs visible-sm">
+            {# if user_page defined set form action to /view/(username here)
+            else set action to / #}
+            <form class="navbar-form navbar-right form" action="/" method="get">
+              <input
+                type="text"
+                class="form-control"
+                name="q"
+                placeholder="Search..."
+                value="{# set this to search term or empty #}"
+              />
+              <br />
+
+              <select
+                class="form-control"
+                title="Filter"
+                data-width="120px"
+                name="f"
+              >
+                {# define the attribute "selected" if selected, else set No
+                filter as default selected ``#}
+                <option value="0" title="No filter" selected>No filter</option>
+                <option value="1" title="No remakes">No remakes</option>
+                <option value="2" title="Trusted only">Trusted only</option>
+              </select>
+
+              <br />
+
+              <select
+                class="form-control"
+                title="Category"
+                data-width="200px"
+                name="c"
+              >
+                {# define the attribute selected if selected, else set All
+                categories as default selected #}
+                <option value="0" title="All categories" selected>
+                  All categories
+                </option>
+                {% for category in &nyaa_cats %} {% let subcategory =
+                category.subcategory() %}
+                <option
+                  value="{{ subcategory as u8 }}"
+                  title="{{ category.normal() }}"
+                >
+                  {% if !(subcategory as u8).is_multiple_of(10) %}- {% endif
+                  %}{{ subcategory.fancy() }}
+                </option>
+                {% endfor %}
+              </select>
+
+              <br />
+
+              <button class="btn btn-primary form-control" type="submit">
+                <i class="fa fa-search fa-fw"></i> Search
+              </button>
+            </form>
+          </div>
+
+          {# if user_page defined set action to /view/(username here) else / #}
+          <form class="navbar-form navbar-right form" action="/" method="get">
+            <div class="input-group search-container hidden-xs hidden-sm">
+              <div class="input-group-btn nav-filter" id="navFilter-criteria">
+                <select
+                  class="selectpicker show-tick"
+                  title="Filter"
+                  data-width="120px"
+                  name="f"
+                >
+                  {# define the attribute "selected" if selected, else set No
+                  filter as default selected #}
+                  <option value="0" title="No filter" selected>
+                    No filter
+                  </option>
+                  <option value="1" title="No remakes">No remakes</option>
+                  <option value="2" title="Trusted only">Trusted only</option>
+                </select>
+              </div>
+
+              <div class="input-group-btn nav-filter" id="navFilter-category">
+                <select
+                  class="selectpicker show-tick"
+                  title="Category"
+                  data-width="130px"
+                  name="c"
+                >
+                  {# define the attribute selected if selected, else set All
+                  categories as default selected #}
+                  <option value="0_0" title="All categories" selected>
+                    All categories
+                  </option>
+                  {% for category in &nyaa_cats %} {% let subcategory =
+                  category.subcategory() %}
+                  <option
+                    value="{{ subcategory as u8 }}"
+                    title="{{ category.normal() }}"
+                  >
+                    {% if !(subcategory as u8).is_multiple_of(10) %}- {% endif
+                    %}{{ subcategory.fancy() }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <input
+                type="text"
+                class="form-control search-bar"
+                name="q"
+                placeholder="Search..."
+                value="{# set this to search term or empty #}"
+              />
+              <div class="input-group-btn search-btn">
+                <button class="btn btn-primary" type="submit">
+                  <i class="fa fa-search fa-fw"></i>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      {# remember to look into whether to include flashes.html #}
+	  {# if in maintenance mode and message exists add the following: #}
+      <!--
+		<div class="alert alert-dismissable alert-warning" role="alert">
+			<button type="button" class="close" data-dismiss="alert">&times;</button>
+			{# maintenance mode message #}
+		</div>
+      -->
+      {# end if #}
+	  
+	  {% block body %}{% endblock %}
+    </div>
+
+    <footer style="text-align: center">
+      <p>Dark Mode: <a href="#" id="themeToggle">Toggle</a></p>
+      {# optionally display commit hash here #}
+      <!--
+        <p>Commit: <a href="{# link to commit hash #}">{# commit hash #}</a></p>
+      -->
+    </footer>
+  </body>
+</html>

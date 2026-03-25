@@ -4,7 +4,6 @@ use diesel::{
     BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
     SqliteConnection,
 };
-use ipc_channel::ipc::IpcReceiver;
 use std::{
     collections::VecDeque,
     fs::File,
@@ -30,8 +29,6 @@ fn main() -> Result<(), ScrapeError> {
     let file = File::open(&backlog_path).unwrap();
     let backlog: Arc<Mutex<VecDeque<usize>>> =
         Arc::new(Mutex::new(serde_json::from_reader(&file).unwrap()));
-    let (_, receiver) =
-        ipc_channel::ipc::channel::<Vec<usize>>().map_err(ScrapeError::CreateIpcChannel)?;
 
     std::thread::scope(|s| {
         {
@@ -69,14 +66,12 @@ fn main() -> Result<(), ScrapeError> {
                     let datetime = schedule.upcoming(Utc).take(1).next().unwrap();
                     let until = datetime - now;
                     std::thread::sleep(until.to_std().unwrap());
-                    append_to_backlog(&receiver, backlog.clone());
                     while let Some(id) = {
                         let mut backlog = backlog.lock().unwrap();
                         let front = backlog.pop_front();
                         drop(backlog);
                         front
                     } {
-                        append_to_backlog(&receiver, backlog.clone());
                         let mut client = client.lock().unwrap();
                         let user_delta = TimeDelta::weeks(3);
                         let result = client.scrape_torrent(connection, id, &user_delta);
@@ -99,7 +94,7 @@ fn main() -> Result<(), ScrapeError> {
                     }
 
                     let file = File::create(&backlog_path).unwrap();
-                    serde_json::to_writer(&file, &backlog).unwrap();
+                    serde_json::to_writer(&file, &*backlog).unwrap();
                 }
             });
         }
@@ -221,14 +216,4 @@ fn get_latest_torrent(connection: &mut SqliteConnection) -> Result<Vec<usize>, D
         .load(connection)
         .map(|v| v.iter().map(|t| t.date as usize).collect())
         .map_err(|e| DatabaseError::Search(Item::Torrent, e))
-}
-
-fn append_to_backlog(receiver: &IpcReceiver<Vec<usize>>, backlog: Arc<Mutex<VecDeque<usize>>>) {
-    if let Ok(input) = receiver.try_recv() {
-        let mut backlog = backlog.lock().unwrap();
-        for id in input {
-            backlog.push_back(id);
-        }
-        drop(backlog);
-    }
 }

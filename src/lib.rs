@@ -11,15 +11,15 @@ pub mod util;
 use models::DatabaseError;
 use models::Item;
 
-pub const SCRAPE_URL: &str = "http://192.168.0.5:10999/scrape";
+//pub const SCRAPE_URL: &str = "http://192.168.0.5:10999/scrape";
 
-#[derive(Debug)]
+/*#[derive(Debug)]
 pub struct TorrentStats {
     pub info_hash: String,
     pub seeders: usize,
     pub leechers: usize,
     pub downloads: usize,
-}
+}*/
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();

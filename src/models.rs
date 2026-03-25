@@ -1,7 +1,7 @@
 use crate::schema::*;
 use diesel::prelude::*;
-use num_derive::FromPrimitive as from_num;
-use num_traits::FromPrimitive;
+use num_derive::{FromPrimitive as from_num, ToPrimitive as to_num};
+use num_traits::{FromPrimitive, ToPrimitive};
 use std::fmt::Display;
 use thiserror::Error;
 
@@ -293,15 +293,27 @@ impl Display for Category {
 impl Category {
     pub fn from_u8(n: u8) -> Option<Self> {
         match n {
-            11..=14 => Some(Self::Anime(AnimeSubCategory::from_u8(n)?)),
-            21..=22 => Some(Self::Audio(AudioSubCategory::from_u8(n)?)),
-            31..=33 => Some(Self::Literature(LiteratureSubCategory::from_u8(n)?)),
-            41..=44 => Some(Self::LiveAction(LiveActionSubCategory::from_u8(n)?)),
-            51..=52 => Some(Self::Pictures(PicturesSubCategory::from_u8(n)?)),
-            61..=62 => Some(Self::Software(SoftwareSubCategory::from_u8(n)?)),
+            10..=14 => Some(Self::Anime(AnimeSubCategory::from_u8(n)?)),
+            20..=22 => Some(Self::Audio(AudioSubCategory::from_u8(n)?)),
+            30..=33 => Some(Self::Literature(LiteratureSubCategory::from_u8(n)?)),
+            40..=44 => Some(Self::LiveAction(LiveActionSubCategory::from_u8(n)?)),
+            50..=52 => Some(Self::Pictures(PicturesSubCategory::from_u8(n)?)),
+            60..=62 => Some(Self::Software(SoftwareSubCategory::from_u8(n)?)),
             _ => None,
         }
     }
+
+    pub fn subcategory(&self) -> &dyn SubCategory<Value = u8> {
+        match self {
+            Self::Anime(c) => c,
+            Self::Audio(c) => c,
+            Self::Literature(c) => c,
+            Self::LiveAction(c) => c,
+            Self::Pictures(c) => c,
+            Self::Software(c) => c,
+        }
+    }
+
     pub fn fancy(&self) -> String {
         match self {
             Self::Anime(c) => format!("{self} - {}", c.fancy()),
@@ -312,24 +324,44 @@ impl Category {
             Self::Software(c) => format!("{self} - {}", c.fancy()),
         }
     }
+
     pub fn normal(&self) -> String {
-        match self {
+        let result = match self {
             Self::Anime(c) => format!("{self} - {c}"),
             Self::Audio(c) => format!("{self} - {c}"),
             Self::Literature(c) => format!("{self} - {c}"),
             Self::LiveAction(c) => format!("{self} - {c}"),
             Self::Pictures(c) => format!("{self} - {c}"),
             Self::Software(c) => format!("{self} - {c}"),
+        };
+
+        if result == format!("{self} - {self}") {
+            self.to_string()
+        } else {
+            result
         }
     }
+
+    pub fn all() -> Vec<Self> {
+        let mut result = Vec::new();
+        let ids = [10..=14, 20..=22, 30..=33, 40..=44, 50..=52, 60..=62];
+        ids.into_iter()
+            .for_each(|range| range.for_each(|id| result.push(Category::from_u8(id).unwrap())));
+
+        result
+    }
 }
+
+pub trait SubCategory: Display + FancySubCategory + askama::PrimitiveType {}
+impl<T: Display + FancySubCategory + askama::PrimitiveType> SubCategory for T {}
 
 pub trait FancySubCategory {
     fn fancy(&self) -> String;
 }
 
-#[derive(from_num)]
+#[derive(from_num, to_num)]
 pub enum AnimeSubCategory {
+    Anime = 10,
     AnimeMusicVideo = 11,
     EnglishTranslated = 12,
     NonEnglishTranslated = 13,
@@ -338,6 +370,7 @@ pub enum AnimeSubCategory {
 impl Display for AnimeSubCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            Self::Anime => "Anime",
             Self::AnimeMusicVideo => "AMV",
             Self::EnglishTranslated => "English",
             Self::NonEnglishTranslated => "Non-English",
@@ -348,6 +381,7 @@ impl Display for AnimeSubCategory {
 impl FancySubCategory for AnimeSubCategory {
     fn fancy(&self) -> String {
         match self {
+            Self::Anime => "Anime",
             Self::AnimeMusicVideo => "Anime Music Video",
             Self::EnglishTranslated => "English-translated",
             Self::NonEnglishTranslated => "Non-English-translated",
@@ -356,15 +390,23 @@ impl FancySubCategory for AnimeSubCategory {
         .to_string()
     }
 }
+impl askama::PrimitiveType for AnimeSubCategory {
+    type Value = u8;
+    fn get(&self) -> Self::Value {
+        self.to_u8().unwrap()
+    }
+}
 
-#[derive(from_num)]
+#[derive(from_num, to_num)]
 pub enum AudioSubCategory {
+    Audio = 20,
     Lossless = 21,
     Lossy = 22,
 }
 impl Display for AudioSubCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            Self::Audio => "Audio",
             Self::Lossless => "Lossless",
             Self::Lossy => "Lossy",
         })
@@ -375,9 +417,16 @@ impl FancySubCategory for AudioSubCategory {
         self.to_string()
     }
 }
+impl askama::PrimitiveType for AudioSubCategory {
+    type Value = u8;
+    fn get(&self) -> Self::Value {
+        self.to_u8().unwrap()
+    }
+}
 
-#[derive(from_num)]
+#[derive(from_num, to_num)]
 pub enum LiteratureSubCategory {
+    Literature = 30,
     EnglishTranslated = 31,
     NonEnglishTranslated = 32,
     Raw = 33,
@@ -385,6 +434,7 @@ pub enum LiteratureSubCategory {
 impl Display for LiteratureSubCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            Self::Literature => "Literature",
             Self::EnglishTranslated => "English",
             Self::NonEnglishTranslated => "Non-English",
             Self::Raw => "Raw",
@@ -394,6 +444,7 @@ impl Display for LiteratureSubCategory {
 impl FancySubCategory for LiteratureSubCategory {
     fn fancy(&self) -> String {
         match self {
+            Self::Literature => "Literature",
             Self::EnglishTranslated => "English-translated",
             Self::NonEnglishTranslated => "Non-English-translated",
             Self::Raw => "Raw",
@@ -401,9 +452,16 @@ impl FancySubCategory for LiteratureSubCategory {
         .to_string()
     }
 }
+impl askama::PrimitiveType for LiteratureSubCategory {
+    type Value = u8;
+    fn get(&self) -> Self::Value {
+        self.to_u8().unwrap()
+    }
+}
 
-#[derive(from_num)]
+#[derive(from_num, to_num)]
 pub enum LiveActionSubCategory {
+    LiveAction = 40,
     EnglishTranslated = 41,
     IdolPromotionalVideo = 42,
     NonEnglishTranslated = 43,
@@ -412,6 +470,7 @@ pub enum LiveActionSubCategory {
 impl Display for LiveActionSubCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            Self::LiveAction => "Live Action",
             Self::EnglishTranslated => "English",
             Self::IdolPromotionalVideo => "Idol/PV",
             Self::NonEnglishTranslated => "Non-English",
@@ -422,6 +481,7 @@ impl Display for LiveActionSubCategory {
 impl FancySubCategory for LiveActionSubCategory {
     fn fancy(&self) -> String {
         match self {
+            Self::LiveAction => "Live Action",
             Self::EnglishTranslated => "English-translated",
             Self::IdolPromotionalVideo => "Idol/Promotional Video",
             Self::NonEnglishTranslated => "Non-English-translated",
@@ -430,15 +490,23 @@ impl FancySubCategory for LiveActionSubCategory {
         .to_string()
     }
 }
+impl askama::PrimitiveType for LiveActionSubCategory {
+    type Value = u8;
+    fn get(&self) -> Self::Value {
+        self.to_u8().unwrap()
+    }
+}
 
-#[derive(from_num)]
+#[derive(from_num, to_num)]
 pub enum PicturesSubCategory {
+    Pictures = 50,
     Graphics = 51,
     Photos = 52,
 }
 impl Display for PicturesSubCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            Self::Pictures => "Pictures",
             Self::Graphics => "Graphics",
             Self::Photos => "Photos",
         })
@@ -449,15 +517,23 @@ impl FancySubCategory for PicturesSubCategory {
         self.to_string()
     }
 }
+impl askama::PrimitiveType for PicturesSubCategory {
+    type Value = u8;
+    fn get(&self) -> Self::Value {
+        self.to_u8().unwrap()
+    }
+}
 
-#[derive(from_num)]
+#[derive(from_num, to_num)]
 pub enum SoftwareSubCategory {
+    Software = 60,
     Applications = 61,
     Games = 62,
 }
 impl Display for SoftwareSubCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            Self::Software => "Software",
             Self::Applications => "Apps",
             Self::Games => "Games",
         })
@@ -466,9 +542,16 @@ impl Display for SoftwareSubCategory {
 impl FancySubCategory for SoftwareSubCategory {
     fn fancy(&self) -> String {
         match self {
+            Self::Software => "Software",
             Self::Applications => "Applications",
             Self::Games => "Games",
         }
         .to_string()
+    }
+}
+impl askama::PrimitiveType for SoftwareSubCategory {
+    type Value = u8;
+    fn get(&self) -> Self::Value {
+        self.to_u8().unwrap()
     }
 }

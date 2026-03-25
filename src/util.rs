@@ -1,10 +1,10 @@
-use crate::SCRAPE_URL;
-use crate::TorrentStats;
+//use crate::TorrentStats;
+//use crate::SCRAPE_URL;
 use diesel::dsl::IntoBoxed;
 use diesel::prelude::*;
 use diesel::sqlite::Sqlite;
 use lava_torrent::bencode::BencodeElem;
-use reqwest::blocking::ClientBuilder;
+//use reqwest::blocking::ClientBuilder;
 use std::num::NonZeroU32;
 const N_ITER: NonZeroU32 = NonZeroU32::new(100000).unwrap();
 
@@ -63,7 +63,7 @@ pub fn torrent_from_hash(
     }
 }
 
-pub fn torrent_stats_from_hash(hash: &str) -> Result<Vec<TorrentStats>, String> {
+/*pub fn torrent_stats_from_hash(hash: &str) -> Result<Vec<TorrentStats>, String> {
     let client = maperr!(ClientBuilder::new().build())?;
     let formatted_hash = format_hash(hash);
     let url = format!("{SCRAPE_URL}?info_hash={formatted_hash}");
@@ -109,7 +109,7 @@ pub fn torrent_stats_from_hash(hash: &str) -> Result<Vec<TorrentStats>, String> 
         torrents.push(torrent);
     }
     Ok(torrents)
-}
+}*/
 
 pub fn verify_password(password: &str, hash: &str, salt: &str) -> bool {
     use data_encoding::HEXUPPER;

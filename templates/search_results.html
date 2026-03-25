@@ -1,0 +1,109 @@
+{# 
+fn render_column_header(header_class, header_style, center_text=False, sort_key=None, header_title=None)
+let class_suffix = if search.sort == sort_key ? "_{search.order}" : ""
+let th_classes = [header_class, "sorting{class_suffix}" if sort_key exists, "text-center" if center_text]
+<th class="th_classes.join(' ')" title="header_title" style="header_style">
+  if sort_key:
+  let href = modify_query(s=sort_key, o="asc") if class_suffix == "_desc" else modify_query(s=sort_key, o="desc")
+  <a href="href"></a>
+  endif
+  caller()
+</th>
+endfn
+#}
+
+{#
+special results appears to be an optional struct which has an attribute saying if an existing username matches the first word in the query
+
+if special_results is not None && not on /view/*:
+
+if special_results.first_word_user
+
+<div class="alert alert-info">
+  let query = existing query but remove the username (i think) (see query_sans_user)
+  <a href="/view/{username}{query}">Click here to see only results uploaded by {username}</a>
+</div>
+
+endif
+
+endif
+#}
+
+
+{% if !self.results.torrents.is_empty() %}
+<div class="table-responsive">
+	<table class="table table-bordered table-hover table-striped torrent-list">
+		<thead>
+			<tr>
+        <th class="{{ self.results.header_classes("hdr-category", None, true) }}" style="width: 80px">Category</th>
+        <th class="{{ self.results.header_classes("hdr-name", None, false) }}" style="width: auto">Name</th>
+        <th class="{{ self.results.header_classes("hdr-comments", Some(Sort::Comments), true) }}" style="width: 50px" title="Comments">
+          {# remember to figure this out #}
+          <a href=""></a>
+          <i class="fa fa-comments-o"></i>
+        </th>
+        <th class="{{ self.results.header_classes("hdr-link", None, true) }}" style="width: 70px">Link</th>
+        <th class="{{ self.results.header_classes("hdr-size", Some(Sort::Size), true) }}" style="width: 100px">Size</th>
+        <th class="{{ self.results.header_classes("hdr-date", Some(Sort::Date), true) }}" style="width: 140px" title="In UTC">Date</th>
+        <th class="{{ self.results.header_classes("hdr-seeders", Some(Sort::Seeders), true) }}" style="width: 50px" title="Seeders">
+					<i class="fa fa-arrow-up" aria-hidden="true"></i>
+        </th>
+        <th class="{{ self.results.header_classes("hdr-leechers", Some(Sort::Leechers), true) }}" style="width: 50px" title="Leechers">
+					<i class="fa fa-arrow-down" aria-hidden="true"></i>
+        </th>
+        <th class="{{ self.results.header_classes("hdr-downloads", Some(Sort::Completed), true) }}" style="width: 50px" title="Completed downloads">
+					<i class="fa fa-check" aria-hidden="true"></i>
+        </th>
+			</tr>
+		</thead>
+		<tbody>
+      {% for torrent in self.results.torrents %}
+      <tr class="{{ torrent.row_class() }}">
+        <td>
+          {# remember to set the query and filename too #}
+          {% let category_name = models::Category::from_u8(*torrent.category).unwrap().fancy() %}
+          <a href="/?category=category" title="{{ category_name }}">
+            <img src="/{{torrent.category}}.png" alt="{{ category_name }}" class="category-icon">
+          </a>
+        </td>
+        <td colspan="2">
+          {% if torrent.comments > 0 %}
+          <a href="/view/{{torrent.id}}#comments" class="comments" title="{{ torrent.comments }} comment{% if torrent.comments > 1 %}s{% endif %}">
+            <i class="fa fa-comments-o"></i>{{ torrent.comments }}
+					</a>
+          {% endif %}
+          <a href="/view/{{ torrent.id }}" title="{{ torrent.title | escape }}">{{torrent.title}}</a>
+        </td>
+        <td class="text-center">
+          {% if torrent.torrent.as_ref().is_some() %}
+          <a href="/download/{{ torrent.id }}.torrent"><i class="fa fa-fw fa-download"></i></a>
+          {% endif %}
+          {% if torrent.magnet.as_ref().is_some() %}
+					<a href="{{ torrent.magnet.as_ref().unwrap() }}"><i class="fa fa-fw fa-magnet"></i></a>
+          {% endif %}
+        </td>
+				<td class="text-center">{{ torrent.size }}</td>
+				<td class="text-center" data-timestamp="{{ torrent.date }}">{{ torrent.time }}</td>
+				<td class="text-center">{{ torrent.seeders }}</td>
+				<td class="text-center">{{ torrent.leechers }}</td>
+				<td class="text-center">{{ torrent.completed }}</td>
+      </tr>
+      {% endfor %}
+		</tbody>
+	</table>
+</div>
+{% else %}
+<h3>No results found</h3>
+{% endif %}
+
+<div class="center">
+  {#
+	{% if use_elastic %}
+	{{ pagination.info }}
+	{{ pagination.links }}
+	{% else %}
+	{% from "bootstrap/pagination.html" import render_pagination %}
+	{{ render_pagination(torrent_query) }}
+	{% endif %}
+  #}
+</div>
