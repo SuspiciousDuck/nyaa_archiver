@@ -5,8 +5,8 @@ diesel::table! {
         id -> Integer,
         torrent_id -> Integer,
         submitter -> Text,
-        date_created -> Integer,
-        date_edited -> Nullable<Integer>,
+        date_created -> BigInt,
+        date_edited -> Nullable<BigInt>,
         text -> Text,
     }
 }
@@ -20,7 +20,7 @@ diesel::table! {
 diesel::table! {
     torrents (id) {
         id -> Integer,
-        info_hash -> Nullable<Text>,
+        info_hash -> Text,
         seeders -> Integer,
         leechers -> Integer,
         completed -> Integer,
@@ -29,7 +29,7 @@ diesel::table! {
         submitter -> Nullable<Text>,
         information -> Nullable<Text>,
         size -> BigInt,
-        date -> Integer,
+        date -> BigInt,
         description -> Nullable<Text>,
         comments -> Integer,
         remake -> Bool,
@@ -37,7 +37,8 @@ diesel::table! {
         partial -> Bool,
         anonymous -> Bool,
         deleted -> Bool,
-        last_updated -> Nullable<Integer>,
+        last_updated -> Nullable<BigInt>,
+        hidden -> Bool,
     }
 }
 
@@ -50,7 +51,9 @@ diesel::table! {
         nyaa -> Bool,
         trusted -> Bool,
         banned -> Bool,
-        last_updated -> Nullable<Integer>,
+        last_updated -> Nullable<BigInt>,
+        nyaa_admin -> Bool,
+        nyaa_mod -> Bool,
     }
 }
 

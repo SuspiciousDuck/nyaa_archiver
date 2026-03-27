@@ -17,7 +17,7 @@ fn main() {
     let mut torrents = Vec::new();
     for id in (last_torrent.id..=latest_torrent.id).rev() {
         let id = id as usize;
-        if !torrent_exists(conn, &id) && !torrent_deleted(conn, &id) {
+        if !torrent_exists(conn, id) && !torrent_deleted(conn, id) {
             torrents.push(id);
         }
     }

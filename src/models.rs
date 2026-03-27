@@ -52,7 +52,9 @@ pub struct User {
     pub nyaa: bool,
     pub trusted: bool,
     pub banned: bool,
-    pub last_updated: Option<i32>,
+    pub last_updated: Option<i64>,
+    pub nyaa_admin: bool,
+    pub nyaa_mod: bool,
 }
 impl User {
     pub fn insert(&self, conn: &mut SqliteConnection, replace: bool) -> Result<(), DatabaseError> {
@@ -128,7 +130,7 @@ impl DeletedTorrent {
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Torrent {
     pub id: i32,
-    pub info_hash: Option<String>,
+    pub info_hash: String,
     pub seeders: i32,
     pub leechers: i32,
     pub completed: i32,
@@ -137,7 +139,7 @@ pub struct Torrent {
     pub submitter: Option<String>,
     pub information: Option<String>,
     pub size: i64,
-    pub date: i32,
+    pub date: i64,
     pub description: Option<String>,
     pub comments: i32,
     pub remake: bool,
@@ -145,20 +147,21 @@ pub struct Torrent {
     pub partial: bool,
     pub anonymous: bool,
     pub deleted: bool,
-    pub last_updated: Option<i32>,
+    pub last_updated: Option<i64>,
+    pub hidden: bool,
 }
 
 #[derive(Insertable, AsChangeset, Debug)]
 #[diesel(table_name = torrents, treat_none_as_null = true)]
 pub struct NewTorrent {
     pub id: Option<i32>,
-    pub info_hash: Option<String>,
+    pub info_hash: String,
     pub title: String,
     pub category: i32,
     pub submitter: Option<String>,
     pub information: Option<String>,
     pub size: i64,
-    pub date: i32,
+    pub date: i64,
     pub description: Option<String>,
     pub comments: i32,
     pub remake: bool,
@@ -166,7 +169,8 @@ pub struct NewTorrent {
     pub partial: bool,
     pub anonymous: bool,
     pub deleted: bool,
-    pub last_updated: Option<i32>,
+    pub last_updated: Option<i64>,
+    pub hidden: bool,
 }
 impl NewTorrent {
     pub fn insert(
@@ -175,7 +179,7 @@ impl NewTorrent {
         replace: bool,
     ) -> Result<Torrent, DatabaseError> {
         let id = self.id.as_ref().map(|id| *id as usize);
-        let exists = id.is_some() && crate::torrent_exists(conn, &id.unwrap());
+        let exists = id.is_some() && crate::torrent_exists(conn, id.unwrap());
         if exists && !replace {
             return Err(DatabaseError::Exists(
                 Item::Torrent,
@@ -207,8 +211,8 @@ pub struct Comment {
     pub id: i32,
     pub torrent_id: i32,
     pub submitter: String,
-    pub date_created: i32,
-    pub date_edited: Option<i32>,
+    pub date_created: i64,
+    pub date_edited: Option<i64>,
     pub text: String,
 }
 
@@ -218,8 +222,8 @@ pub struct NewComment {
     pub id: Option<i32>,
     pub torrent_id: i32,
     pub submitter: String,
-    pub date_created: i32,
-    pub date_edited: Option<i32>,
+    pub date_created: i64,
+    pub date_edited: Option<i64>,
     pub text: String,
 }
 impl NewComment {
@@ -229,14 +233,14 @@ impl NewComment {
         replace: bool,
     ) -> Result<Comment, DatabaseError> {
         use torrents::dsl;
-        if !crate::torrent_exists(conn, &(self.torrent_id as usize)) {
+        if !crate::torrent_exists(conn, self.torrent_id as usize) {
             return Err(DatabaseError::NotExists(
                 Item::Torrent,
                 self.torrent_id.to_string(),
             ));
         }
         let id = self.id.as_ref().map(|id| *id as usize);
-        let exists = id.is_some() && crate::comment_exists(conn, &id.unwrap());
+        let exists = id.is_some() && crate::comment_exists(conn, id.unwrap());
         if exists && !replace {
             return Err(DatabaseError::Exists(
                 Item::Comment,

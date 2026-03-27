@@ -17,6 +17,18 @@ path = "src/lib.rs"
 #path = "src/js_api.rs.bak"
 
 [[bin]]
+name = "delete_torrents"
+path = "src/delete_torrents.rs"
+
+[[bin]]
+name = "validate_infohash_field"
+path = "src/validate_infohash_field.rs"
+
+[[bin]]
+name = "validate_size_field"
+path = "src/validate_size_field.rs"
+
+[[bin]]
 name = "api"
 path = "src/api.rs"
 

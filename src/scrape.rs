@@ -1,5 +1,4 @@
-use crate::models::{DatabaseError, Item, NewComment, NewTorrent, User};
-use crate::schema::torrents;
+use crate::models::{DatabaseError, NewComment, NewTorrent, User};
 use crate::{
     comment_exists, get_torrent, get_torrent_comments, get_user, mark_torrent_deleted, user_exists,
 };
@@ -8,7 +7,7 @@ use arti_ureq::tor_rtcompat::tokio::TokioRustlsRuntime;
 use arti_ureq::ureq::tls::{RootCerts, TlsConfig, TlsProvider};
 use arti_ureq::ureq::Agent;
 use chrono::TimeDelta;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
+use diesel::SqliteConnection;
 use flate2::read::GzDecoder;
 use lava_torrent::torrent::v1::Torrent as LavaTorrent;
 use lava_torrent::LavaTorrentError;
@@ -65,6 +64,10 @@ pub enum ScrapeError {
     WriteFile(PathBuf, std::io::Error), // file path
     #[error("Failed to write to file {0:#?}!: {1}")]
     OpenFile(PathBuf, std::io::Error), // file path
+    #[error("Failed to get info hash for the torrent {0}!")]
+    InfoHash(usize),
+    #[error("Failed to get size for the torrent {0}!")]
+    Size(usize),
 }
 impl From<SystemTimeError> for ScrapeError {
     fn from(value: SystemTimeError) -> Self {
@@ -97,6 +100,7 @@ struct ParsedTorrent {
     remake: bool,
     trusted: bool,
     anonymous: bool,
+    hidden: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -116,6 +120,8 @@ struct ParsedCommentUser {
     username: String,
     trusted: bool,
     banned: bool,
+    admin: bool,
+    moderator: bool,
 }
 
 struct ParsedComment {
@@ -124,6 +130,7 @@ struct ParsedComment {
     submitter: ParsedCommentUser,
     date: usize,
     content: String,
+    avatar: String,
 }
 
 #[derive(Clone)]
@@ -257,10 +264,10 @@ impl Client {
             }?;
             torrents.push(torrent.clone());
             let now = chrono::Utc::now();
-            match (get_torrent(connection, &torrent.id), deep) {
+            match (get_torrent(connection, torrent.id), deep) {
                 (Some(torrent), true) => {
                     if torrent.last_updated.is_some_and(|d| {
-                        let timestamp = chrono::DateTime::from_timestamp(d as i64, 0).unwrap();
+                        let timestamp = chrono::DateTime::from_timestamp(d, 0).unwrap();
                         (now - timestamp).ge(torrent_threshold)
                     }) {
                         match self.scrape_torrent(connection, torrent.id as usize, user_threshold) {
@@ -269,7 +276,7 @@ impl Client {
                                 continue;
                             }
                             Err(ScrapeError::TorrentDeleted(id)) => {
-                                mark_torrent_deleted(connection, &id)?;
+                                mark_torrent_deleted(connection, id)?;
                                 continue;
                             }
                             result => result,
@@ -285,12 +292,7 @@ impl Client {
                             continue;
                         }
                         Err(ScrapeError::TorrentDeleted(id)) => {
-                            diesel::update(torrents::table.find(id as i32))
-                                .set(torrents::deleted.eq(true))
-                                .execute(connection)
-                                .map_err(|e| {
-                                    DatabaseError::Update(Item::Torrent, id.to_string(), e)
-                                })?;
+                            mark_torrent_deleted(connection, id)?;
                             continue;
                         }
                         result => result,
@@ -299,17 +301,24 @@ impl Client {
                 }
                 _ => (),
             }
-            let hash = torrent.magnet.hash().map(|s| s.to_string());
-            let size = torrent.magnet.length().unwrap_or(torrent.size as u64);
+            let hash = torrent
+                .magnet
+                .hash()
+                .ok_or(ScrapeError::InfoHash(torrent.id))?;
+            let size = torrent
+                .magnet
+                .length()
+                .ok_or(ScrapeError::Size(torrent.id))?; // we could use torrent.size but we want
+                                                        // the database to be accurate
             let torrent = NewTorrent {
                 id: Some(torrent.id as i32),
-                info_hash: hash,
+                info_hash: hash.to_string(),
                 title: torrent.title,
                 category: torrent.category as i32,
                 submitter: None,
                 information: None,
                 size: size as i64,
-                date: torrent.date as i32,
+                date: torrent.date as i64,
                 description: None,
                 comments: torrent.comments as i32,
                 remake: torrent.remake,
@@ -318,6 +327,7 @@ impl Client {
                 partial: true,
                 deleted: false,
                 last_updated: None,
+                hidden: false,
             };
             torrent.insert(connection, false)?;
             new_torrents += 1;
@@ -342,7 +352,7 @@ impl Client {
         }
         let response = String::from_utf8(response?).unwrap();
         let dom = Html::parse_document(&response);
-        let parsed = parse_torrent(&dom.root_element(), &id)?;
+        let parsed = parse_torrent(&dom.root_element(), id)?;
 
         if !parsed.anonymous && !user_exists(connection, parsed.submitter.as_ref().unwrap()) {
             User {
@@ -353,7 +363,9 @@ impl Client {
                 nyaa: true,
                 trusted: parsed.trusted,
                 banned: false, // TODO: is it even possible to tell?
-                last_updated: Some(chrono::Utc::now().timestamp() as i32),
+                last_updated: Some(chrono::Utc::now().timestamp()),
+                nyaa_admin: false,
+                nyaa_mod: false,
             }
             .insert(connection, false)?;
         }
@@ -363,7 +375,7 @@ impl Client {
         let comment_elements = dom.select(&comments_selector);
         let mut comments = Vec::new();
         for comment in comment_elements {
-            let comment = parse_comment(connection, &comment, &id, user_threshold, self)?;
+            let comment = parse_comment(&comment, id)?;
             comments.push(comment);
         }
 
@@ -382,26 +394,26 @@ impl Client {
         let hash = torrent.info_hash();
         let size = torrent.length as usize;
 
-        let comments_num = get_torrent(connection, &id)
+        let comments_num = get_torrent(connection, id)
             .map(|t| {
                 if t.partial {
                     0
                 } else {
-                    get_torrent_comments(connection, &id).len() as i32 // just in case a torrent has
-                                                                       // mismatched comment counts
+                    get_torrent_comments(connection, id).len() as i32 // just in case a torrent has
+                                                                      // mismatched comment counts
                 }
             })
             .unwrap_or(0);
 
         NewTorrent {
             id: Some(id as i32),
-            info_hash: Some(hash),
+            info_hash: hash,
             title: parsed.title,
             category: parsed.category as i32,
             submitter: parsed.submitter,
             information: Some(parsed.info),
             size: size as i64,
-            date: parsed.date as i32,
+            date: parsed.date as i64,
             description: Some(parsed.desc),
             comments: comments_num,
             remake: parsed.remake,
@@ -409,7 +421,8 @@ impl Client {
             anonymous: parsed.anonymous,
             partial: false,
             deleted: false,
-            last_updated: Some(chrono::Utc::now().timestamp() as i32),
+            last_updated: Some(chrono::Utc::now().timestamp()),
+            hidden: parsed.hidden,
         }
         .insert(connection, true)?;
 
@@ -422,13 +435,16 @@ impl Client {
                 nyaa: true,
                 trusted: comment.submitter.trusted,
                 banned: comment.submitter.banned,
-                last_updated: Some(chrono::Utc::now().timestamp() as i32),
+                last_updated: Some(chrono::Utc::now().timestamp()),
+                nyaa_admin: comment.submitter.admin,
+                nyaa_mod: comment.submitter.moderator,
             };
+            let mut last_updated = None;
             match get_user(connection, &comment.submitter.username) {
                 Some(u) => {
-                    let u = &u[0];
+                    last_updated = u.last_updated;
                     if u.last_updated.is_some_and(|d| {
-                        let timestamp = chrono::DateTime::from_timestamp(d as i64, 0).unwrap();
+                        let timestamp = chrono::DateTime::from_timestamp(d, 0).unwrap();
                         (chrono::Utc::now() - timestamp).ge(user_threshold)
                     }) || u.last_updated.is_none()
                     {
@@ -437,16 +453,28 @@ impl Client {
                 }
                 None => user.insert(connection, false)?,
             }
-            if !comment_exists(connection, &comment.comment_id) {
+            if !comment_exists(connection, comment.comment_id) {
                 NewComment {
                     id: Some(comment.comment_id as i32),
                     torrent_id: comment.torrent_id as i32,
                     submitter: comment.submitter.username.clone(),
-                    date_created: comment.date as i32,
+                    date_created: comment.date as i64,
                     date_edited: None,
                     text: comment.content.clone(),
                 }
                 .insert(connection, false)?;
+            }
+            if (!PathBuf::from(format!("./pfps/{}.png", user.username))
+                .try_exists()
+                .is_ok_and(|e| e)
+                || last_updated.is_some_and(|t| {
+                    let timestamp = chrono::DateTime::from_timestamp(t, 0).unwrap();
+                    (chrono::Utc::now() - timestamp).ge(user_threshold)
+                }))
+                && comment.avatar != "/static/img/avatar/default.png"
+            {
+                let path = format!("./pfps/{}.png", comment.submitter.username);
+                self.download(&comment.avatar, &PathBuf::from(path))?;
             }
         }
 
@@ -531,8 +559,9 @@ fn parse_partial_torrent(
     })
 }
 
-fn parse_torrent(dom: &ElementRef, id: &usize) -> Result<ParsedTorrent, ScrapeError> {
+fn parse_torrent(dom: &ElementRef, id: usize) -> Result<ParsedTorrent, ScrapeError> {
     let url = format!("https://nyaa.si/view/{id}");
+    let panel_heading = select(dom, ".panel-heading", &url)?;
     let title_element = select(dom, ".panel-title", &url)?;
     let title_parent = title_element
         .parent()
@@ -544,6 +573,9 @@ fn parse_torrent(dom: &ElementRef, id: &usize) -> Result<ParsedTorrent, ScrapeEr
         .unwrap();
     let remake = title_parent.has_class("panel-danger", scraper::CaseSensitivity::CaseSensitive);
     let trusted = title_parent.has_class("panel-success", scraper::CaseSensitivity::CaseSensitive);
+    let hidden = panel_heading
+        .attr("style")
+        .is_some_and(|a| a.contains("background-color: darkgray"));
     let title = title_element
         .text()
         .collect::<String>()
@@ -607,41 +639,20 @@ fn parse_torrent(dom: &ElementRef, id: &usize) -> Result<ParsedTorrent, ScrapeEr
         remake: (remake),
         trusted: (trusted),
         anonymous: (anonymous),
+        hidden: (hidden),
     })
 }
 
-fn parse_comment(
-    connection: &mut SqliteConnection,
-    comment: &ElementRef,
-    id: &usize,
-    user_threshold: &TimeDelta,
-    client: &mut Client,
-) -> Result<ParsedComment, ScrapeError> {
+fn parse_comment(comment: &ElementRef, id: usize) -> Result<ParsedComment, ScrapeError> {
     let url = format!("https://nyaa.si/view/{id}");
-    let mut trusted = false;
-    let mut banned = false;
-    let submitter = select(comment, "a[title=\"User\"]", &url)
-        .or(select(comment, "a[title=\"Trusted\"]", &url).inspect(|_| trusted = true))
-        .or(select(comment, "a[title=\"BANNED User\"]", &url).inspect(|_| banned = true))?
-        .text()
-        .collect::<String>();
+    let submitter_elem = select(comment, "p>a", &url)?;
+    let submitter_title = attr(&submitter_elem, "title")?;
+    let submitter = submitter_elem.text().collect::<String>();
+    let banned = submitter_title.contains("BANNED");
+    let trusted = submitter_title.contains("Trusted");
+    let admin = submitter_title.contains("Administrator");
+    let moderator = submitter_title.contains("Moderator");
     let avatar = attr(&select(comment, ".avatar", &url)?, "src")?.to_string();
-    let timestamp = get_user(connection, &submitter)
-        .map(|u| u.first().map(|u| u.last_updated))
-        .unwrap_or(None)
-        .unwrap_or(None);
-    if (!PathBuf::from(format!("./pfps/{submitter}.png"))
-        .try_exists()
-        .is_ok_and(|b| b)
-        || timestamp.is_some_and(|t| {
-            let timestamp = chrono::DateTime::from_timestamp(t as i64, 0).unwrap();
-            (chrono::Utc::now() - timestamp).ge(user_threshold)
-        }))
-        && avatar != "/static/img/avatar/default.png"
-    {
-        let path = format!("./pfps/{submitter}.png");
-        client.download(&avatar, &PathBuf::from(path))?;
-    }
     let date = attr(
         &select(comment, "small[data-timestamp]", &url)?,
         "data-timestamp",
@@ -657,13 +668,16 @@ fn parse_comment(
 
     Ok(ParsedComment {
         comment_id: (comment_id),
-        torrent_id: *id,
+        torrent_id: id,
         submitter: ParsedCommentUser {
             username: submitter,
             trusted: (trusted),
             banned: (banned),
+            admin: (admin),
+            moderator: (moderator),
         },
         date: (date),
         content: (content),
+        avatar: (avatar),
     })
 }

@@ -39,19 +39,9 @@ pub fn user_exists(conn: &mut SqliteConnection, username: &str) -> bool {
     is_present.is_ok_and(|b| b)
 }
 
-pub fn get_user(conn: &mut SqliteConnection, username: &str) -> Option<Vec<models::User>> {
-    use models::User;
+pub fn get_user(conn: &mut SqliteConnection, username: &str) -> Option<models::User> {
     use schema::users::dsl;
-    let matches = dsl::users
-        .filter(dsl::username.eq(username))
-        .select(User::as_select())
-        .load(conn)
-        .ok();
-    if matches.as_ref().is_some_and(|m| m.is_empty()) {
-        None
-    } else {
-        matches
-    }
+    dsl::users.find(username).first(conn).ok()
 }
 
 pub fn delete_user(
@@ -72,51 +62,51 @@ pub fn delete_user(
         .map_err(|e| DatabaseError::Delete(Item::User, username.clone(), e))
 }
 
-pub fn get_torrent(conn: &mut SqliteConnection, id: &usize) -> Option<models::Torrent> {
+pub fn get_torrent(conn: &mut SqliteConnection, id: usize) -> Option<models::Torrent> {
     use schema::torrents::dsl;
-    let id = *id as i32;
+    let id = id as i32;
     dsl::torrents.find(id).first(conn).ok()
 }
 
-pub fn torrent_exists(conn: &mut SqliteConnection, id: &usize) -> bool {
+pub fn torrent_exists(conn: &mut SqliteConnection, id: usize) -> bool {
     use diesel::dsl::{exists, select};
     use schema::torrents;
-    let id = *id as i32;
+    let id = id as i32;
     let is_present = select(exists(torrents::table.find(id))).get_result(conn);
     is_present.is_ok_and(|b| b)
 }
 
-pub fn torrent_deleted(conn: &mut SqliteConnection, id: &usize) -> bool {
+pub fn torrent_deleted(conn: &mut SqliteConnection, id: usize) -> bool {
     use diesel::dsl::{exists, select};
     use schema::deleted_torrents;
-    let deleted = select(exists(deleted_torrents::table.find(*id as i32))).get_result(conn);
+    let deleted = select(exists(deleted_torrents::table.find(id as i32))).get_result(conn);
     deleted.is_ok_and(|b| b) || get_torrent(conn, id).is_some_and(|t| t.deleted)
 }
 
-pub fn mark_torrent_deleted(conn: &mut SqliteConnection, id: &usize) -> Result<(), DatabaseError> {
+pub fn mark_torrent_deleted(conn: &mut SqliteConnection, id: usize) -> Result<(), DatabaseError> {
     use models::DeletedTorrent;
     use schema::torrents;
     match get_torrent(conn, id) {
         None => Ok(()),
-        Some(_) => diesel::update(torrents::table.find(*id as i32))
+        Some(_) => diesel::update(torrents::table.find(id as i32))
             .set(torrents::deleted.eq(true))
             .execute(conn)
             .map(|_| ())
             .map_err(|e| DatabaseError::Update(Item::Torrent, id.to_string(), e)),
     }
-    .and(DeletedTorrent { id: *id as i32 }.insert(conn))
+    .and(DeletedTorrent { id: id as i32 }.insert(conn))
 }
 
 pub fn delete_torrent(
     conn: &mut SqliteConnection,
-    id: &usize,
+    id: usize,
 ) -> Result<Vec<models::Torrent>, DatabaseError> {
     if !torrent_exists(conn, id) {
         return Err(DatabaseError::NotExists(Item::Torrent, id.to_string()));
     }
     use models::Torrent;
     use schema::torrents::{self, dsl};
-    let id = *id as i32;
+    let id = id as i32;
 
     diesel::delete(torrents::table)
         .filter(dsl::id.eq(id))
@@ -125,9 +115,9 @@ pub fn delete_torrent(
         .map_err(|e| DatabaseError::Delete(Item::Torrent, id.to_string(), e))
 }
 
-pub fn get_torrent_comments(conn: &mut SqliteConnection, id: &usize) -> Vec<models::Comment> {
+pub fn get_torrent_comments(conn: &mut SqliteConnection, id: usize) -> Vec<models::Comment> {
     use schema::comments::dsl;
-    let id = *id as i32;
+    let id = id as i32;
     dsl::comments
         .filter(dsl::torrent_id.eq(id))
         .select(models::Comment::as_select())
@@ -135,23 +125,23 @@ pub fn get_torrent_comments(conn: &mut SqliteConnection, id: &usize) -> Vec<mode
         .unwrap_or_default()
 }
 
-pub fn get_comment(conn: &mut SqliteConnection, id: &usize) -> Option<models::Comment> {
+pub fn get_comment(conn: &mut SqliteConnection, id: usize) -> Option<models::Comment> {
     use schema::comments::dsl;
-    let id = *id as i32;
+    let id = id as i32;
     dsl::comments.find(id).first(conn).ok()
 }
 
-pub fn comment_exists(conn: &mut SqliteConnection, id: &usize) -> bool {
+pub fn comment_exists(conn: &mut SqliteConnection, id: usize) -> bool {
     use diesel::dsl::{exists, select};
     use schema::comments::dsl;
-    let id = *id as i32;
+    let id = id as i32;
     let is_present = select(exists(dsl::comments.filter(dsl::id.eq(id)))).get_result(conn);
     is_present.is_ok_and(|b| b)
 }
 
 pub fn delete_comment(
     conn: &mut SqliteConnection,
-    id: &usize,
+    id: usize,
 ) -> Result<Vec<models::Comment>, DatabaseError> {
     if !comment_exists(conn, id) {
         return Err(DatabaseError::NotExists(Item::Comment, id.to_string()));
@@ -160,7 +150,7 @@ pub fn delete_comment(
     use schema::comments::{self, dsl};
     use schema::torrents::dsl as tor_dsl;
     let torrent_id = get_comment(conn, id).unwrap().torrent_id;
-    let id = *id as i32;
+    let id = id as i32;
 
     let result = diesel::delete(comments::table)
         .filter(dsl::id.eq(id))

@@ -1,4 +1,5 @@
 CREATE INDEX idx_torrents_date ON torrents(date);
+CREATE INDEX idx_torrents_info_hash ON torrents(info_hash);
 CREATE INDEX idx_torrents_seeders ON torrents(seeders);
 CREATE INDEX idx_torrents_leechers ON torrents(leechers);
 CREATE INDEX idx_torrents_completed ON torrents(completed);

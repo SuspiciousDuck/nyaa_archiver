@@ -80,7 +80,7 @@ fn main() -> Result<(), ScrapeError> {
                             eprintln!("{err}");
                             match err {
                                 ScrapeError::TorrentDeleted(_) => {
-                                    if let Err(e) = mark_torrent_deleted(connection, &id) {
+                                    if let Err(e) = mark_torrent_deleted(connection, id) {
                                         eprintln!("{e}");
                                     }
                                 }
@@ -111,8 +111,8 @@ fn main() -> Result<(), ScrapeError> {
                     let datetime = schedule.upcoming(Utc).take(1).next().unwrap();
                     let until = datetime - now;
                     std::thread::sleep(until.to_std().unwrap());
-                    let date_threshold = (now - chrono::Duration::minutes(10)).timestamp() as i32;
-                    let update_threshold = (now - chrono::Duration::weeks(1)).timestamp() as i32;
+                    let date_threshold = (now - chrono::Duration::minutes(10)).timestamp();
+                    let update_threshold = (now - chrono::Duration::weeks(1)).timestamp();
                     let torrents = torrents::table
                         .filter(torrents::deleted.eq(false))
                         .filter(
@@ -130,12 +130,11 @@ fn main() -> Result<(), ScrapeError> {
                         Ok(torrents) => {
                             let mut backlog = backlog.lock().unwrap();
                             for torrent in &torrents {
-                                let date = chrono::DateTime::from_timestamp(torrent.date as i64, 0)
-                                    .unwrap();
+                                let date =
+                                    chrono::DateTime::from_timestamp(torrent.date, 0).unwrap();
                                 let date = if let Some(last_updated) = torrent.last_updated {
                                     let last =
-                                        chrono::DateTime::from_timestamp(last_updated as i64, 0)
-                                            .unwrap();
+                                        chrono::DateTime::from_timestamp(last_updated, 0).unwrap();
                                     date + TimeDelta::weeks((last - date).num_weeks())
                                 } else {
                                     date

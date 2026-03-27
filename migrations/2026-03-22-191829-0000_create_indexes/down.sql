@@ -1,4 +1,5 @@
 DROP INDEX idx_torrents_date;
+DROP INDEX idx_torrents_info_hash;
 DROP INDEX idx_torrents_seeders;
 DROP INDEX idx_torrents_leechers;
 DROP INDEX idx_torrents_completed;

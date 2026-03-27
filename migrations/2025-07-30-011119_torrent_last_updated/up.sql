@@ -1,1 +1,1 @@
-ALTER TABLE torrents ADD last_updated INTEGER
+ALTER TABLE torrents ADD last_updated BIGINT

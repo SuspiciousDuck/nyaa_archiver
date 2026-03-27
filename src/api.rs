@@ -51,9 +51,7 @@ impl actix_web::error::ResponseError for ServerError {
     }
 
     fn status_code(&self) -> actix_web::http::StatusCode {
-        match *self {
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        }
+        StatusCode::INTERNAL_SERVER_ERROR
     }
 }
 impl From<askama::Error> for ServerError {
@@ -169,7 +167,7 @@ struct BasicTorrent {
     category: u8,
     title: String,
     torrent: Option<PathBuf>,
-    magnet: Option<String>,
+    magnet: String,
     size: String,
     date: usize,
     time: String,
@@ -195,16 +193,13 @@ impl TryFrom<&models::Torrent> for BasicTorrent {
         } else {
             None
         };
-        // TODO: make info_hash not optional in database
-        let magnet = value.info_hash.as_ref().map(|hash| {
-            MagnetBuilder::new()
-                .hash(hash)
-                .hash_type("btih")
-                .length(value.size as u64)
-                .display_name(&value.title)
-                .build()
-                .to_string()
-        });
+        let magnet = MagnetBuilder::new()
+            .hash(&value.info_hash)
+            .hash_type("btih")
+            .length(value.size as u64)
+            .display_name(&value.title)
+            .build()
+            .to_string();
 
         Ok(Self {
             id: value.id as usize,
@@ -214,7 +209,7 @@ impl TryFrom<&models::Torrent> for BasicTorrent {
             magnet,
             size: format!("{size:.1}"),
             date: value.date as usize,
-            time: DateTime::from_timestamp_secs(value.date as i64)
+            time: DateTime::from_timestamp_secs(value.date)
                 .ok_or(ServerError::DateTime(value.id as usize))?
                 .format("%Y-%m-%d %H:%M")
                 .to_string(),

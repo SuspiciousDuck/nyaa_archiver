@@ -78,9 +78,7 @@ endif
           {% if torrent.torrent.as_ref().is_some() %}
           <a href="/download/{{ torrent.id }}.torrent"><i class="fa fa-fw fa-download"></i></a>
           {% endif %}
-          {% if torrent.magnet.as_ref().is_some() %}
-					<a href="{{ torrent.magnet.as_ref().unwrap() }}"><i class="fa fa-fw fa-magnet"></i></a>
-          {% endif %}
+					<a href="{{ torrent.magnet }}"><i class="fa fa-fw fa-magnet"></i></a>
         </td>
 				<td class="text-center">{{ torrent.size }}</td>
 				<td class="text-center" data-timestamp="{{ torrent.date }}">{{ torrent.time }}</td>
