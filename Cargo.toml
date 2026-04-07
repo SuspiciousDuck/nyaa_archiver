@@ -21,14 +21,6 @@ name = "delete_torrents"
 path = "src/delete_torrents.rs"
 
 [[bin]]
-name = "validate_infohash_field"
-path = "src/validate_infohash_field.rs"
-
-[[bin]]
-name = "validate_size_field"
-path = "src/validate_size_field.rs"
-
-[[bin]]
 name = "api"
 path = "src/api.rs"
 
@@ -41,8 +33,8 @@ name = "scraper"
 path = "src/scraper.rs"
 
 [[bin]]
-name = "generate_backlog"
-path = "src/generate_backlog.rs"
+name = "validate"
+path = "src/validate.rs"
 
 [dependencies]
 actix-files = "0.6.6"

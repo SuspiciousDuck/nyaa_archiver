@@ -1,6 +1,9 @@
+avatars
 backlog.json
 Cargo.lock
 database.db
+database.db-shm
+database.db-wal
 nyaa_site
 pfps
 target

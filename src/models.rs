@@ -39,6 +39,8 @@ pub enum DatabaseError {
     Search(Item, diesel::result::Error),
     #[error("Failed to hash password!")]
     Hash,
+    #[error("diesel-rs encountered an error!: {0}")]
+    Generic(diesel::result::Error),
 }
 
 #[derive(Queryable, Selectable, Insertable, AsChangeset, Debug)]
@@ -52,9 +54,9 @@ pub struct User {
     pub nyaa: bool,
     pub trusted: bool,
     pub banned: bool,
-    pub last_updated: Option<i64>,
     pub nyaa_admin: bool,
     pub nyaa_mod: bool,
+    pub avatar: Option<String>,
 }
 impl User {
     pub fn insert(&self, conn: &mut SqliteConnection, replace: bool) -> Result<(), DatabaseError> {
@@ -147,8 +149,10 @@ pub struct Torrent {
     pub partial: bool,
     pub anonymous: bool,
     pub deleted: bool,
-    pub last_updated: Option<i64>,
     pub hidden: bool,
+    pub next_update: Option<i64>,
+    pub update_count: i32,
+    pub update_frequency: Option<i32>,
 }
 
 #[derive(Insertable, AsChangeset, Debug)]
@@ -169,8 +173,10 @@ pub struct NewTorrent {
     pub partial: bool,
     pub anonymous: bool,
     pub deleted: bool,
-    pub last_updated: Option<i64>,
     pub hidden: bool,
+    pub next_update: Option<i64>,
+    pub update_count: i32,
+    pub update_frequency: Option<i32>,
 }
 impl NewTorrent {
     pub fn insert(

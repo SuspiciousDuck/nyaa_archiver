@@ -1,19 +1,16 @@
 use crate::models::{DatabaseError, NewComment, NewTorrent, User};
-use crate::{
-    comment_exists, get_torrent, get_torrent_comments, get_user, mark_torrent_deleted, user_exists,
-};
+use crate::{comment_exists, get_torrent, get_torrent_comments, mark_torrent_deleted, user_exists};
 use arti_ureq::arti_client::{TorClient, TorClientConfig};
 use arti_ureq::tor_rtcompat::tokio::TokioRustlsRuntime;
 use arti_ureq::ureq::tls::{RootCerts, TlsConfig, TlsProvider};
 use arti_ureq::ureq::Agent;
-use chrono::TimeDelta;
 use diesel::SqliteConnection;
 use flate2::read::GzDecoder;
 use lava_torrent::torrent::v1::Torrent as LavaTorrent;
 use lava_torrent::LavaTorrentError;
 use magnet_url::{Magnet, MagnetError};
 use scraper::{ElementRef, Html, Selector};
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::thread::sleep;
@@ -60,6 +57,8 @@ pub enum ScrapeError {
     Database(DatabaseError), // error string
     #[error("Failed to create file at {0:#?}!: {1}")]
     CreateFile(PathBuf, std::io::Error), // file path
+    #[error("Failed to create file at {0:#?}!: {1}")]
+    CreateDirectory(PathBuf, std::io::Error), // dir path
     #[error("Failed to open file {0:#?}!: {1}")]
     WriteFile(PathBuf, std::io::Error), // file path
     #[error("Failed to write to file {0:#?}!: {1}")]
@@ -68,6 +67,8 @@ pub enum ScrapeError {
     InfoHash(usize),
     #[error("Failed to get size for the torrent {0}!")]
     Size(usize),
+    #[error("Failed to parse the avatar id from its url {0:?}!")]
+    AvatarUrl(String),
 }
 impl From<SystemTimeError> for ScrapeError {
     fn from(value: SystemTimeError) -> Self {
@@ -94,9 +95,9 @@ struct ParsedTorrent {
     title: String,
     category: usize,
     submitter: Option<String>,
-    info: String,
+    info: Option<String>,
     date: usize,
-    desc: String,
+    desc: Option<String>,
     remake: bool,
     trusted: bool,
     anonymous: bool,
@@ -122,6 +123,7 @@ struct ParsedCommentUser {
     banned: bool,
     admin: bool,
     moderator: bool,
+    avatar: Option<String>,
 }
 
 struct ParsedComment {
@@ -130,8 +132,11 @@ struct ParsedComment {
     submitter: ParsedCommentUser,
     date: usize,
     content: String,
-    avatar: String,
 }
+
+/// returns next_update, update_frequency
+/// args: new, differs, date, update_frequency
+type UpdateAction = fn(bool, bool, i64, Option<i32>) -> (i64, i32);
 
 #[derive(Clone)]
 pub struct Client {
@@ -242,8 +247,7 @@ impl Client {
         page: usize,
         flags: &str,
         deep: bool,
-        torrent_threshold: &TimeDelta,
-        user_threshold: &TimeDelta,
+        update_action: UpdateAction,
     ) -> Result<(Vec<ParsedPartialTorrent>, Vec<usize>), ScrapeError> {
         let target = format!("https://nyaa.si/?p={page}{flags}");
         let response = String::from_utf8(self.get(&target, true)?).unwrap();
@@ -263,30 +267,10 @@ impl Client {
                 result => result,
             }?;
             torrents.push(torrent.clone());
-            let now = chrono::Utc::now();
             match (get_torrent(connection, torrent.id), deep) {
-                (Some(torrent), true) => {
-                    if torrent.last_updated.is_some_and(|d| {
-                        let timestamp = chrono::DateTime::from_timestamp(d, 0).unwrap();
-                        (now - timestamp).ge(torrent_threshold)
-                    }) {
-                        match self.scrape_torrent(connection, torrent.id as usize, user_threshold) {
-                            Err(ScrapeError::TorrentMissing(id)) => {
-                                failed_torrents.push(id);
-                                continue;
-                            }
-                            Err(ScrapeError::TorrentDeleted(id)) => {
-                                mark_torrent_deleted(connection, id)?;
-                                continue;
-                            }
-                            result => result,
-                        }?;
-                    }
-                    continue;
-                }
-                (Some(_), false) => continue,
+                (Some(_), _) => continue,
                 (None, true) => {
-                    match self.scrape_torrent(connection, torrent.id as usize, user_threshold) {
+                    match self.scrape_torrent(connection, torrent.id as usize, update_action) {
                         Err(ScrapeError::TorrentMissing(id)) => {
                             failed_torrents.push(id);
                             continue;
@@ -310,6 +294,8 @@ impl Client {
                 .length()
                 .ok_or(ScrapeError::Size(torrent.id))?; // we could use torrent.size but we want
                                                         // the database to be accurate
+            let (next_update, update_frequency) =
+                update_action(true, true, torrent.date as i64, None);
             let torrent = NewTorrent {
                 id: Some(torrent.id as i32),
                 info_hash: hash.to_string(),
@@ -326,8 +312,10 @@ impl Client {
                 anonymous: true,
                 partial: true,
                 deleted: false,
-                last_updated: None,
                 hidden: false,
+                next_update: Some(next_update),
+                update_count: 0,
+                update_frequency: Some(update_frequency),
             };
             torrent.insert(connection, false)?;
             new_torrents += 1;
@@ -342,7 +330,7 @@ impl Client {
         &mut self,
         connection: &mut SqliteConnection,
         id: usize,
-        user_threshold: &TimeDelta,
+        update_action: UpdateAction,
     ) -> Result<(), ScrapeError> {
         // HTML parsing
         let target = format!("https://nyaa.si/view/{id}");
@@ -363,9 +351,9 @@ impl Client {
                 nyaa: true,
                 trusted: parsed.trusted,
                 banned: false, // TODO: is it even possible to tell?
-                last_updated: Some(chrono::Utc::now().timestamp()),
                 nyaa_admin: false,
                 nyaa_mod: false,
+                avatar: None,
             }
             .insert(connection, false)?;
         }
@@ -405,24 +393,49 @@ impl Client {
             })
             .unwrap_or(0);
 
+        let ((next_update, update_frequency), update_count) =
+            if let Some(old_torrent) = get_torrent(connection, id) {
+                let changed = old_torrent.title != parsed.title
+                    || old_torrent.category != parsed.category as i32
+                    || old_torrent.information != parsed.info
+                    || old_torrent.description != parsed.desc
+                    || comments_num as usize != comments.len()
+                    || old_torrent.remake != parsed.remake
+                    || old_torrent.trusted != parsed.trusted
+                    || old_torrent.anonymous != parsed.anonymous
+                    || old_torrent.hidden != parsed.hidden;
+                (
+                    update_action(
+                        false,
+                        changed,
+                        parsed.date as i64,
+                        old_torrent.update_frequency,
+                    ),
+                    old_torrent.update_count + 1,
+                )
+            } else {
+                (update_action(true, true, parsed.date as i64, None), 1)
+            };
         NewTorrent {
             id: Some(id as i32),
             info_hash: hash,
             title: parsed.title,
             category: parsed.category as i32,
             submitter: parsed.submitter,
-            information: Some(parsed.info),
+            information: parsed.info,
             size: size as i64,
             date: parsed.date as i64,
-            description: Some(parsed.desc),
+            description: parsed.desc,
             comments: comments_num,
             remake: parsed.remake,
             trusted: parsed.trusted,
             anonymous: parsed.anonymous,
             partial: false,
             deleted: false,
-            last_updated: Some(chrono::Utc::now().timestamp()),
             hidden: parsed.hidden,
+            next_update: Some(next_update),
+            update_count,
+            update_frequency: Some(update_frequency),
         }
         .insert(connection, true)?;
 
@@ -435,24 +448,12 @@ impl Client {
                 nyaa: true,
                 trusted: comment.submitter.trusted,
                 banned: comment.submitter.banned,
-                last_updated: Some(chrono::Utc::now().timestamp()),
                 nyaa_admin: comment.submitter.admin,
                 nyaa_mod: comment.submitter.moderator,
+                avatar: comment.submitter.avatar.clone(),
             };
-            let mut last_updated = None;
-            match get_user(connection, &comment.submitter.username) {
-                Some(u) => {
-                    last_updated = u.last_updated;
-                    if u.last_updated.is_some_and(|d| {
-                        let timestamp = chrono::DateTime::from_timestamp(d, 0).unwrap();
-                        (chrono::Utc::now() - timestamp).ge(user_threshold)
-                    }) || u.last_updated.is_none()
-                    {
-                        user.insert(connection, true)?;
-                    }
-                }
-                None => user.insert(connection, false)?,
-            }
+            user.insert(connection, true)?;
+
             if !comment_exists(connection, comment.comment_id) {
                 NewComment {
                     id: Some(comment.comment_id as i32),
@@ -464,17 +465,17 @@ impl Client {
                 }
                 .insert(connection, false)?;
             }
-            if (!PathBuf::from(format!("./pfps/{}.png", user.username))
-                .try_exists()
-                .is_ok_and(|e| e)
-                || last_updated.is_some_and(|t| {
-                    let timestamp = chrono::DateTime::from_timestamp(t, 0).unwrap();
-                    (chrono::Utc::now() - timestamp).ge(user_threshold)
-                }))
-                && comment.avatar != "/static/img/avatar/default.png"
-            {
-                let path = format!("./pfps/{}.png", comment.submitter.username);
-                self.download(&comment.avatar, &PathBuf::from(path))?;
+
+            if let Some(avatar) = user.avatar {
+                let user_path = PathBuf::from(format!("./avatars/{}/", user.username));
+                let avatar_path = PathBuf::from(format!("./avatars/{}/{avatar}", user.username));
+                let avatar_url = format!("https://nyaa.si/user/{}/{avatar}", user.username);
+
+                if !avatar_path.try_exists().is_ok_and(|e| e) {
+                    create_dir_all(&user_path)
+                        .map_err(|e| ScrapeError::CreateDirectory(user_path, e))?;
+                    self.download(&avatar_url, &avatar_path)?;
+                }
             }
         }
 
@@ -628,7 +629,17 @@ fn parse_torrent(dom: &ElementRef, id: usize) -> Result<ParsedTorrent, ScrapeErr
     .collect::<String>()
     .replace("\n				", "")
     .replace("\n			", "");
+    let info = if info == "No information." {
+        None
+    } else {
+        Some(info)
+    };
     let desc = select(dom, "#torrent-description", &url)?.inner_html();
+    let desc = if desc == "#### No description." {
+        None
+    } else {
+        Some(desc)
+    };
     Ok(ParsedTorrent {
         title: (title),
         category: (category),
@@ -675,9 +686,22 @@ fn parse_comment(comment: &ElementRef, id: usize) -> Result<ParsedComment, Scrap
             banned: (banned),
             admin: (admin),
             moderator: (moderator),
+            avatar: if avatar == "/static/img/avatar/default.png" {
+                None
+            } else {
+                Some(
+                    avatar
+                        .split('/')
+                        .next_back()
+                        .ok_or(ScrapeError::AvatarUrl(avatar.clone()))?
+                        .split('?')
+                        .next()
+                        .ok_or(ScrapeError::AvatarUrl(avatar.clone()))?
+                        .to_string(),
+                )
+            },
         },
         date: (date),
         content: (content),
-        avatar: (avatar),
     })
 }

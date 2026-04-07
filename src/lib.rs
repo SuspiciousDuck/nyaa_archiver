@@ -29,6 +29,14 @@ pub fn establish_connection() -> SqliteConnection {
         .unwrap_or_else(|_| panic!("Error connecting to {database_url}!"));
     conn.batch_execute("PRAGMA busy_timeout = 1000;")
         .expect("Failed to set busy_timeout!");
+    conn.batch_execute("PRAGMA journal_mode = WAL;")
+        .expect("Failed to set journal_mode!");
+    conn.batch_execute("PRAGMA synchronous = NORMAL;")
+        .expect("Failed to set synchronous!");
+    conn.batch_execute("PRAGMA wal_autocheckpoint = 1000;")
+        .expect("Failed to set wal_autocheckpoint!");
+    conn.batch_execute("PRAGMA wal_checkpoint(TRUNCATE);")
+        .expect("Failed to set wal_checkpoint!");
     conn
 }
 

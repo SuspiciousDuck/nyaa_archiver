@@ -14,11 +14,5 @@ CREATE TABLE torrents (
   comments INTEGER NOT NULL DEFAULT 0,
   remake BOOLEAN NOT NULL DEFAULT FALSE,
   trusted BOOLEAN NOT NULL DEFAULT FALSE,
-  partial BOOLEAN NOT NULL DEFAULT TRUE,
-  CHECK (
-    partial = TRUE or information IS NOT NULL
-  )
-  CHECK (
-    partial = TRUE or description IS NOT NULL
-  )
+  partial BOOLEAN NOT NULL DEFAULT TRUE
 );

@@ -1,218 +1,178 @@
-use chrono::{TimeDelta, Utc};
+use std::collections::VecDeque;
+use std::str::FromStr;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use chrono::{prelude::*, TimeDelta};
+
 use cron::Schedule;
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
-    SqliteConnection,
-};
-use std::{
-    collections::VecDeque,
-    fs::File,
-    io::Write,
-    path::PathBuf,
-    str::FromStr,
-    sync::{Arc, Mutex},
-};
-use tracker_lib::{
-    establish_connection, mark_torrent_deleted,
-    models::{DatabaseError, Item, Torrent},
-    schema::torrents,
-    scrape::{Client, ScrapeError},
-};
+
+use diesel::prelude::*;
+
+use tracker_lib::models::DatabaseError;
+use tracker_lib::scrape::{Client, ScrapeError};
+use tracker_lib::{establish_connection, torrent_deleted, torrent_exists};
+use tracker_lib::{mark_torrent_deleted, schema};
 
 fn main() -> Result<(), ScrapeError> {
+    let connection = Arc::new(Mutex::new(establish_connection()));
     let client = Arc::new(Mutex::new(Client::new()?));
-    let backlog_path = PathBuf::from("./backlog.json");
-    if !backlog_path.try_exists().is_ok_and(|b| b) {
-        let mut file = File::create(&backlog_path).unwrap();
-        file.write_all(b"[]").unwrap();
-    }
-    let file = File::open(&backlog_path).unwrap();
-    let backlog: Arc<Mutex<VecDeque<usize>>> =
-        Arc::new(Mutex::new(serde_json::from_reader(&file).unwrap()));
+
+    println!("Performing initial page scrapes...");
+    client.lock().unwrap().scrape_page(
+        &mut connection.lock().unwrap(),
+        1,
+        "",
+        true,
+        next_update_algo,
+    )?;
+    client.lock().unwrap().scrape_page(
+        &mut connection.lock().unwrap(),
+        1,
+        "&o=asc",
+        true,
+        next_update_algo,
+    )?;
+
+    println!("Generating backlog list...");
+    let backlog = Arc::new(Mutex::new(generate_backlog(
+        &mut connection.lock().unwrap(),
+    )?));
+    println!("Initialized");
 
     std::thread::scope(|s| {
         {
+            let connection = connection.clone();
             let client = client.clone();
             let backlog = backlog.clone();
             s.spawn(move || {
-                let connection = &mut establish_connection();
-                // scrape latest page
                 let expression = "0 */15 * * * *";
                 let schedule = Schedule::from_str(expression).unwrap();
 
                 loop {
                     let now = Utc::now();
-                    // something is very wrong if this fails
                     let datetime = schedule.upcoming(Utc).take(1).next().unwrap();
                     let until = datetime - now;
+                    println!("Next page scrape in {} minutes", until.num_minutes());
                     std::thread::sleep(until.to_std().unwrap());
-                    recursive_scrape_page(connection, client.clone(), backlog.clone(), 1, None);
+                    println!("Scraping latest page");
+
+                    let mut connection = connection.lock().unwrap();
+                    let mut client = client.lock().unwrap();
+                    let result = client.scrape_page(&mut connection, 1, "", true, next_update_algo);
+
+                    match result {
+                        Ok((_, errors)) => errors.iter().for_each(|id| {
+                            eprintln!("{}", ScrapeError::TorrentMissing(*id));
+                            backlog.lock().unwrap().push_back(*id);
+                        }),
+                        Err(err) => eprintln!("{err}"),
+                    }
                 }
             });
         }
         {
+            let connection = connection.clone();
             let client = client.clone();
             let backlog = backlog.clone();
-            s.spawn(move || {
-                let connection = &mut establish_connection();
-                // deep scrape torrent backlog
-                let expression = "10 */30 * * * *"; // happens 10 seconds after adding scheduled
-                                                    // torrents so theres no race condition
-                                                    // (probably)
-                let schedule = Schedule::from_str(expression).unwrap();
+            s.spawn(move || loop {
+                let mut connection = connection.lock().unwrap();
+                let mut client = client.lock().unwrap();
+                let mut backlog = backlog.lock().unwrap();
+                let now = Utc::now();
 
-                loop {
-                    let now = Utc::now();
-                    let datetime = schedule.upcoming(Utc).take(1).next().unwrap();
-                    let until = datetime - now;
-                    std::thread::sleep(until.to_std().unwrap());
-                    while let Some(id) = {
-                        let mut backlog = backlog.lock().unwrap();
-                        let front = backlog.pop_front();
-                        drop(backlog);
-                        front
-                    } {
-                        let mut client = client.lock().unwrap();
-                        let user_delta = TimeDelta::weeks(3);
-                        let result = client.scrape_torrent(connection, id, &user_delta);
-                        drop(client);
-                        if let Err(err) = result {
-                            eprintln!("{err}");
-                            match err {
-                                ScrapeError::TorrentDeleted(_) => {
-                                    if let Err(e) = mark_torrent_deleted(connection, id) {
-                                        eprintln!("{e}");
-                                    }
-                                }
-                                _ => {
-                                    let mut backlog = backlog.lock().unwrap();
-                                    backlog.push_back(id);
-                                    drop(backlog);
-                                }
-                            }
+                use schema::torrents as table;
+                let torrent = table::table
+                    .order((table::update_count.asc(), table::date.asc()))
+                    .filter(table::next_update.lt(now.timestamp()))
+                    .filter(table::deleted.eq(false))
+                    .select(table::id)
+                    .first::<i32>(&mut *connection)
+                    .inspect_err(|err| match err {
+                        diesel::result::Error::NotFound => (),
+                        _ => {
+                            eprintln!("Encountered error while fetching torrent to process!: {err}")
                         }
-                    }
+                    })
+                    .ok()
+                    .or(backlog.pop_front().map(|id| id as i32));
 
-                    let file = File::create(&backlog_path).unwrap();
-                    serde_json::to_writer(&file, &*backlog).unwrap();
-                }
-            });
-        }
-        {
-            let backlog = backlog.clone();
-            s.spawn(move || {
-                let connection = &mut establish_connection();
-                // add torrents scheduled to rescan to backlog
-                let expression = "0 */30 * * * *";
-                let schedule = Schedule::from_str(expression).unwrap();
+                if let Some(id) = torrent {
+                    let result =
+                        client.scrape_torrent(&mut connection, id as usize, next_update_algo);
 
-                loop {
-                    let now = Utc::now();
-                    let datetime = schedule.upcoming(Utc).take(1).next().unwrap();
-                    let until = datetime - now;
-                    std::thread::sleep(until.to_std().unwrap());
-                    let date_threshold = (now - chrono::Duration::minutes(10)).timestamp();
-                    let update_threshold = (now - chrono::Duration::weeks(1)).timestamp();
-                    let torrents = torrents::table
-                        .filter(torrents::deleted.eq(false))
-                        .filter(
-                            torrents::last_updated
-                                .is_null()
-                                .and(torrents::date.lt(date_threshold))
-                                .or(torrents::last_updated.lt(update_threshold)),
-                        )
-                        .order(torrents::date.asc())
-                        .limit(100)
-                        .select(Torrent::as_select())
-                        .load(connection)
-                        .map_err(|e| DatabaseError::Search(Item::Torrent, e));
-                    match torrents {
-                        Ok(torrents) => {
-                            let mut backlog = backlog.lock().unwrap();
-                            for torrent in &torrents {
-                                let date =
-                                    chrono::DateTime::from_timestamp(torrent.date, 0).unwrap();
-                                let date = if let Some(last_updated) = torrent.last_updated {
-                                    let last =
-                                        chrono::DateTime::from_timestamp(last_updated, 0).unwrap();
-                                    date + TimeDelta::weeks((last - date).num_weeks())
-                                } else {
-                                    date
-                                };
-                                // by filtering anniversary-style, we avoid having constant
-                                // massive backlogs due to updating torrents continuously
-                                if (now - date).num_weeks() < 1 {
-                                    continue;
-                                }
-                                backlog.push_back(torrent.id as usize);
-                            }
-                            drop(backlog);
-                            println!("Added {} torrents to the backlog", torrents.len());
+                    let _ = result.as_ref().inspect_err(|error| eprintln!("{error}"));
+                    match result.err() {
+                        Some(ScrapeError::TorrentDeleted(id)) => {
+                            let _ = mark_torrent_deleted(&mut connection, id)
+                                .inspect_err(|error| eprintln!("{error}"));
                         }
-                        Err(e) => eprintln!("{e}"),
-                    }
+                        Some(ScrapeError::TorrentMissing(id)) => backlog.push_back(id),
+                        _ => (),
+                    };
+                    drop(connection);
+                    drop(client);
+                    drop(backlog);
+                } else {
+                    drop(connection);
+                    drop(client);
+                    drop(backlog);
+                    eprintln!("No torrents to be updated or in backlog.");
+                    std::thread::sleep(Duration::from_mins(10));
                 }
+                std::thread::sleep(Duration::from_secs(1));
+                // if we dont sleep 1 second, thread 1 will never get a lock
             });
         }
     });
+
     Ok(())
 }
 
-fn recursive_scrape_page(
-    connection: &mut SqliteConnection,
-    client: Arc<Mutex<Client>>,
-    backlog: Arc<Mutex<VecDeque<usize>>>,
-    page: usize,
-    latest: Option<usize>,
-) {
-    let latest = match latest {
-        Some(latest) => Some(latest),
-        None => get_latest_torrent(connection)
-            .map(|l| l.first().copied())
-            .inspect_err(|e| eprintln!("{e}"))
-            .unwrap_or(None),
-    };
-    let result = {
-        let mut client = client.lock().unwrap();
-        let delta = TimeDelta::weeks(1);
-        let user_delta = TimeDelta::weeks(3);
-        let result = client.scrape_page(connection, page, "", true, &delta, &user_delta);
-        drop(client);
-        result
-    };
-    match result {
-        Ok(torrents) => {
-            if !torrents.1.is_empty() {
-                let mut backlog = backlog.lock().unwrap();
-                for torrent in &torrents.1 {
-                    backlog.push_back(*torrent);
-                }
-                drop(backlog);
-                println!("Added {} failed torrents to backlog", torrents.1.len());
-            }
-            match latest {
-                Some(latest) => {
-                    if torrents
-                        .0
-                        .last()
-                        .is_some_and(|torrent| torrent.date > latest)
-                    {
-                        recursive_scrape_page(connection, client, backlog, page + 1, Some(latest));
-                    }
-                }
-                None => eprintln!("Variable 'latest' is None!"),
-            }
-        }
-        Err(err) => eprintln!("{err}"),
+fn next_update_algo(
+    new: bool,
+    differs: bool,
+    date: i64,
+    update_frequency: Option<i32>,
+) -> (i64, i32) {
+    let now = Utc::now();
+
+    let delta = if new {
+        now.signed_duration_since(DateTime::from_timestamp_secs(date).unwrap())
+    } else if differs {
+        TimeDelta::hours(1)
+    } else {
+        TimeDelta::minutes(update_frequency.unwrap_or(60) as i64) * 2
     }
+    .min(TimeDelta::days(365));
+
+    let delta = if delta.num_minutes() == 0 {
+        TimeDelta::hours(1)
+    } else {
+        delta
+    };
+
+    let next_update = (now + delta).timestamp();
+
+    (next_update, delta.num_minutes() as i32)
 }
 
-fn get_latest_torrent(connection: &mut SqliteConnection) -> Result<Vec<usize>, DatabaseError> {
-    torrents::table
-        .order(torrents::date.desc())
-        .limit(1)
-        .select(Torrent::as_select())
-        .load(connection)
-        .map(|v| v.iter().map(|t| t.date as usize).collect())
-        .map_err(|e| DatabaseError::Search(Item::Torrent, e))
+fn generate_backlog(connection: &mut SqliteConnection) -> Result<VecDeque<usize>, DatabaseError> {
+    use schema::torrents as table;
+    let oldest = table::table
+        .order(table::id.asc())
+        .select(table::id)
+        .first::<i32>(connection)
+        .map_err(DatabaseError::Generic)?;
+    let newest = table::table
+        .order(table::id.desc())
+        .select(table::id)
+        .first::<i32>(connection)
+        .map_err(DatabaseError::Generic)?;
+
+    Ok((oldest..=newest)
+        .rev()
+        .map(|id| id as usize)
+        .filter(|id| !torrent_exists(connection, *id) && !torrent_deleted(connection, *id))
+        .collect())
 }

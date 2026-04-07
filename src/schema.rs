@@ -37,8 +37,10 @@ diesel::table! {
         partial -> Bool,
         anonymous -> Bool,
         deleted -> Bool,
-        last_updated -> Nullable<BigInt>,
         hidden -> Bool,
+        next_update -> Nullable<BigInt>,
+        update_count -> Integer,
+        update_frequency -> Nullable<Integer>,
     }
 }
 
@@ -51,9 +53,9 @@ diesel::table! {
         nyaa -> Bool,
         trusted -> Bool,
         banned -> Bool,
-        last_updated -> Nullable<BigInt>,
         nyaa_admin -> Bool,
         nyaa_mod -> Bool,
+        avatar -> Nullable<Text>,
     }
 }
 
